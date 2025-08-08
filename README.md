@@ -1,11 +1,11 @@
 # elias
 
-Servicio de frases motivacionales por email cada 30 minutos usando Netlify (Forms) + GitHub Actions + Resend (Agosto 2025).
+Servicio de frases motivacionales por email cada hora (frase aleatoria) usando Netlify (Forms) + GitHub Actions + Resend (Agosto 2025).
 
 ## Arquitectura
 
 - Landing estática en Netlify con formulario (Netlify Forms).
-- GitHub Actions corre cada 30 minutos (UTC), lee `frases_pilot.csv`, toma la frase del slot actual e intenta enviarla a los suscriptores capturados por Netlify Forms.
+- GitHub Actions corre cada hora (UTC), lee `frases_pilot.csv`, elige una frase aleatoria (determinística dentro de la hora) y la envía a los suscriptores capturados por Netlify Forms.
 - Envío de emails via Resend.
 
 ## Requisitos
@@ -23,8 +23,8 @@ Servicio de frases motivacionales por email cada 30 minutos usando Netlify (Form
 - `scripts/send_emails.py`: script Python que:
   - lee frases
   - obtiene suscriptores desde Netlify Forms
-  - envía la frase del slot actual (cada 30 minutos) vía Resend
-- `.github/workflows/send_emails.yml`: cron cada 30 min.
+  - envía una frase aleatoria por hora vía Resend
+- `.github/workflows/send_emails.yml`: cron cada hora.
 
 ## Configuración (pasos)
 
@@ -54,7 +54,7 @@ Servicio de frases motivacionales por email cada 30 minutos usando Netlify (Form
 
 ## Notas
 
-- Zona horaria: el cron corre en UTC; los slots de 30 min se calculan en UTC.
+- Zona horaria: el cron corre en UTC; la selección de frase se fija por hora UTC para evitar duplicados.
 - Idempotencia: se añade un encabezado `Idempotency-Key` por slot para evitar duplicados si hay reintentos.
 - Baja: el correo indica responder con "UNSUBSCRIBE" (implementar lógica de baja automática sería un siguiente paso, p.ej. lista en KV o Supabase y filtrado en el script).
 

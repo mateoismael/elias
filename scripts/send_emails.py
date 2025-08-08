@@ -26,10 +26,11 @@ def load_phrases(csv_path: str) -> List[Dict[str, str]]:
     return phrases
 
 
-def current_slot(slot_minutes: int = 30) -> int:
+def current_hour_slot() -> int:
+    """Return the current UTC hour slot (epoch hours)."""
     now = datetime.now(timezone.utc)
     epoch = int(now.timestamp())
-    return epoch // (slot_minutes * 60)
+    return epoch // 3600
 
 
 def get_forms(site_id: str, token: str) -> List[Dict]:
@@ -97,9 +98,9 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None
     if resend is None:  # pragma: no cover
         raise RuntimeError('El paquete resend no está instalado.')
     resend.api_key = api_key
-    # Use an idempotency key to reduce duplicates within the same slot
-    slot = str(current_slot())
-    idem = hashlib.sha256((subject + slot).encode('utf-8')).hexdigest()
+    # Use an idempotency key to reduce duplicates within the same hour
+    slot = str(current_hour_slot())
+    idem = hashlib.sha256((subject + "|" + slot).encode('utf-8')).hexdigest()
     # Some SDKs support idempotency_key in headers or params; the Python SDK accepts it in send options via headers.
     # If not supported, Resend ignores it.
     resend.Emails.send({
@@ -122,9 +123,11 @@ def main(argv: List[str]) -> int:
     sender = os.getenv('SENDER_EMAIL', 'Frases <no-reply@example.com>')
 
     phrases = load_phrases(csv_path)
-    slot_minutes = int(os.getenv('SLOT_MINUTES', '30'))
-    slot = current_slot(slot_minutes)
-    idx = slot % len(phrases)
+    # Choose a pseudo-random phrase per hour (deterministic within the hour)
+    slot = current_hour_slot()
+    seed_bytes = hashlib.sha256(f"{slot}:{len(phrases)}".encode('utf-8')).digest()
+    seed_int = int.from_bytes(seed_bytes[:8], 'big')
+    idx = seed_int % len(phrases)
     phrase = phrases[idx]
     phrase_id = phrase.get('id') or f"IDX{idx}"
     phrase_text = phrase.get('text') or ''
@@ -142,7 +145,7 @@ def main(argv: List[str]) -> int:
     html = build_email_html(phrase_id, phrase_text)
 
     if dry_run:
-        print("[DRY-RUN] Slot:", slot, "Index:", idx)
+        print("[DRY-RUN] HourSlot:", slot, "Index:", idx)
         print(f"[DRY-RUN] Frase: {phrase_id} -> {phrase_text[:80]}{'...' if len(phrase_text)>80 else ''}")
         print("[DRY-RUN] Suscriptores:", subscribers)
         return 0
