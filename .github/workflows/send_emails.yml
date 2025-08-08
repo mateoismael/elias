@@ -34,7 +34,7 @@ jobs:
         run: |
           python scripts/send_emails.py --dry-run
 
-      - name: Send emails via Resend
+      - name: Send emails via Resend (every 10s for 1 minute)
         if: ${{ success() }}
         env:
           PHRASES_CSV: frases_pilot.csv
@@ -44,4 +44,8 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
         run: |
-          python scripts/send_emails.py
+          for i in 1 2 3 4 5 6; do
+            echo "[Loop $i] Sending..."
+            python scripts/send_emails.py || true
+            if [ "$i" -lt 6 ]; then sleep 10; fi
+          done
