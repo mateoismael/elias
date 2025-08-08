@@ -1,0 +1,12 @@
+# Netlify configuration (Aug 2025)
+# Static site, no build step needed. Enables form detection at deploy time.
+
+[build]
+  command = ""
+  publish = "."
+
+# Optional: Redirect POSTs to success page for better UX
+[[redirects]]
+  from = "/success"
+  to = "/success.html"
+  status = 200
