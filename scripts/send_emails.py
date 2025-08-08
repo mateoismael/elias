@@ -122,7 +122,8 @@ def main(argv: List[str]) -> int:
     sender = os.getenv('SENDER_EMAIL', 'Frases <no-reply@example.com>')
 
     phrases = load_phrases(csv_path)
-    slot = current_slot(30)
+    slot_minutes = int(os.getenv('SLOT_MINUTES', '30'))
+    slot = current_slot(slot_minutes)
     idx = slot % len(phrases)
     phrase = phrases[idx]
     phrase_id = phrase.get('id') or f"IDX{idx}"
