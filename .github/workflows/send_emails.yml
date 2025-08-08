@@ -2,7 +2,7 @@ name: Send Motivational Phrases
 
 on:
   schedule:
-    - cron: "* * * * *" # Every 1 minute (tests)
+  - cron: "*/30 * * * *" # Every 30 minutes
   workflow_dispatch: {}
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
       - name: Dry-run (log phrase and subscribers count)
         env:
           PHRASES_CSV: frases_pilot.csv
-          SLOT_MINUTES: 1
+          SLOT_MINUTES: 30
           NETLIFY_FORM_NAME: subscribe
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
@@ -39,7 +39,7 @@ jobs:
         if: ${{ success() }}
         env:
           PHRASES_CSV: frases_pilot.csv
-          SLOT_MINUTES: 1
+          SLOT_MINUTES: 30
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           NETLIFY_FORM_NAME: subscribe

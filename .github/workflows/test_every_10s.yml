@@ -1,0 +1,50 @@
+name: Test send every 10 seconds
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_recipients:
+        description: "CSV de emails para prueba (requerido)"
+        required: true
+      iterations:
+        description: "Cuántas veces enviar"
+        required: false
+        default: "6"
+      interval_seconds:
+        description: "Intervalo en segundos"
+        required: false
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  test-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Loop sending every N seconds
+        env:
+          PHRASES_CSV: frases_pilot.csv
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          TEST_RECIPIENTS: ${{ inputs.test_recipients }}
+        run: |
+          echo "Iterations: ${{ inputs.iterations }}, Interval: ${{ inputs.interval_seconds }}s"
+          for i in $(seq 1 ${{ inputs.iterations }}); do
+            echo "Run $i/ ${{ inputs.iterations }}"
+            PERIOD_SECONDS=${{ inputs.interval_seconds }} python scripts/send_test_email.py || true
+            if [ $i -lt ${{ inputs.iterations }} ]; then sleep ${{ inputs.interval_seconds }}; fi
+          done
