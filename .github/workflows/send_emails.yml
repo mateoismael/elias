@@ -2,7 +2,7 @@ name: Send Motivational Phrases
 
 on:
   schedule:
-    - cron: "*/30 * * * *" # Every 30 minutes (UTC)
+    - cron: "* * * * *" # Every 1 minute (tests)
   workflow_dispatch: {}
 
 permissions:
