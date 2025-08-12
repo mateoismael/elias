@@ -84,14 +84,18 @@ def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> Li
 
 
 def build_email_html(phrase_id: str, phrase_text: str) -> str:
+    """
+    Genera HTML para email con soporte adaptativo para temas claro/oscuro.
+    Compatible con Gmail, Outlook, Apple Mail y otros clientes principales.
+    """
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="x-apple-disable-message-reformatting">
-    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
-    <title>Pseudosapiens Daily</title>
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>Pseudosapiens #{phrase_id}</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -103,201 +107,184 @@ def build_email_html(phrase_id: str, phrase_text: str) -> str:
     <![endif]-->
     <style>
         /* Reset styles */
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        
-        /* Prevent text scaling */
-        body, table, td, p, a, li, blockquote {{ 
-            -webkit-text-size-adjust: 100%; 
-            -ms-text-size-adjust: 100%; 
-        }}
-        
-        /* Dark mode detection and styles */
-        :root {{
-            color-scheme: light dark;
-        }}
+        body, table, td, a {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
+        table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
+        img {{ -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }}
         
         /* Light theme (default) */
-        .email-container {{
-            background: #ffffff !important;
-            border: 1px solid #e1e4e8 !important;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
-        }}
+        .wrapper {{ background-color: #f6f8fa !important; }}
+        .container {{ background-color: #ffffff !important; }}
+        .header-bg {{ background-color: #ffffff !important; border-bottom: 1px solid #e1e4e8 !important; }}
+        .content-bg {{ background-color: #ffffff !important; }}
+        .footer-bg {{ background-color: #f6f8fa !important; border-top: 1px solid #e1e4e8 !important; }}
+        .brand-text {{ color: #1a1a1a !important; }}
+        .subtitle-text {{ color: #586069 !important; }}
+        .quote-text {{ color: #24292e !important; }}
+        .footer-text {{ color: #6a737d !important; }}
+        .separator-line {{ background: linear-gradient(90deg, transparent 0%, #0366d6 50%, transparent 100%) !important; }}
         
-        .header-content {{
-            background: #ffffff !important;
-            border-bottom: 1px solid #e1e4e8 !important;
-        }}
-        
-        .brand-title {{
-            color: #1a1a1a !important;
-        }}
-        
-        .reflection-subtitle {{
-            color: #586069 !important;
-        }}
-        
-        .quote-text {{
-            color: #24292e !important;
-        }}
-        
-        .footer-content {{
-            background: #f6f8fa !important;
-            border-top: 1px solid #e1e4e8 !important;
-        }}
-        
-        .footer-brand {{
-            color: #586069 !important;
-        }}
-        
-        .footer-unsubscribe {{
-            color: #6a737d !important;
-        }}
-        
-        .separator-line {{
-            background: linear-gradient(90deg, transparent 0%, #0366d6 20%, #0366d6 80%, transparent 100%) !important;
-        }}
-        
-        /* Dark theme */
+        /* Dark theme support */
         @media (prefers-color-scheme: dark) {{
-            body {{
-                background-color: #0d1117 !important;
-            }}
+            /* Meta color-scheme */
+            :root {{ color-scheme: dark !important; }}
             
-            .email-container {{
-                background: #161b22 !important;
-                border: 1px solid #30363d !important;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
-            }}
+            /* Background colors */
+            .wrapper {{ background-color: #0d1117 !important; }}
+            .container {{ background-color: #0d1117 !important; }}
+            .header-bg {{ background-color: #0d1117 !important; border-bottom: 1px solid #30363d !important; }}
+            .content-bg {{ background-color: #161b22 !important; }}
+            .footer-bg {{ background-color: #0d1117 !important; border-top: 1px solid #30363d !important; }}
             
-            .header-content {{
-                background: #161b22 !important;
-                border-bottom: 1px solid #30363d !important;
-            }}
+            /* Text colors */
+            .brand-text {{ color: #f0f6fc !important; }}
+            .subtitle-text {{ color: #8b949e !important; }}
+            .quote-text {{ color: #e6edf3 !important; }}
+            .footer-text {{ color: #6e7681 !important; }}
             
-            .brand-title {{
-                color: #f0f6fc !important;
-            }}
+            /* Accent colors */
+            .separator-line {{ background: linear-gradient(90deg, transparent 0%, #58a6ff 50%, transparent 100%) !important; }}
             
-            .reflection-subtitle {{
-                color: #8b949e !important;
-            }}
-            
-            .quote-text {{
-                color: #e6edf3 !important;
-            }}
-            
-            .footer-content {{
-                background: #0d1117 !important;
-                border-top: 1px solid #30363d !important;
-            }}
-            
-            .footer-brand {{
-                color: #8b949e !important;
-            }}
-            
-            .footer-unsubscribe {{
-                color: #6e7681 !important;
-            }}
-            
-            .separator-line {{
-                background: linear-gradient(90deg, transparent 0%, #58a6ff 20%, #58a6ff 80%, transparent 100%) !important;
-            }}
+            /* Table backgrounds for Outlook dark mode */
+            table {{ background-color: transparent !important; }}
         }}
         
-        /* Mobile styles */
+        /* Mobile responsive */
         @media only screen and (max-width: 600px) {{
-            .email-container {{
-                width: 100% !important;
-                margin: 16px auto !important;
-                max-width: calc(100% - 32px) !important;
-            }}
-            
-            .header-content {{
-                padding: 24px 16px 20px !important;
-            }}
-            
-            .main-content {{
-                padding: 32px 16px 24px !important;
-            }}
-            
-            .quote-text {{
-                font-size: 20px !important;
-                line-height: 1.4 !important;
-                max-width: 100% !important;
-                letter-spacing: -0.2px !important;
-            }}
-            
-            .brand-title {{
-                font-size: 16px !important;
-            }}
-            
-            .reflection-subtitle {{
-                font-size: 12px !important;
-            }}
-            
-            .footer-content {{
-                padding: 20px 16px !important;
-            }}
-            
-            .separator-line {{
-                width: 60px !important;
-            }}
+            .container {{ width: 100% !important; max-width: 100% !important; }}
+            .content-padding {{ padding: 30px 20px !important; }}
+            .quote-text {{ font-size: 20px !important; line-height: 1.5 !important; }}
+            .header-padding {{ padding: 25px 15px !important; }}
+            .footer-padding {{ padding: 20px 15px !important; }}
         }}
         
         @media only screen and (max-width: 480px) {{
-            .quote-text {{
-                font-size: 18px !important;
-            }}
+            .quote-text {{ font-size: 18px !important; }}
+            .brand-text {{ font-size: 16px !important; }}
+            .subtitle-text {{ font-size: 12px !important; }}
         }}
+        
+        /* Outlook-specific dark mode */
+        [data-ogsc] .wrapper {{ background-color: #0d1117 !important; }}
+        [data-ogsc] .container {{ background-color: #0d1117 !important; }}
+        [data-ogsc] .content-bg {{ background-color: #161b22 !important; }}
+        [data-ogsc] .brand-text {{ color: #f0f6fc !important; }}
+        [data-ogsc] .quote-text {{ color: #e6edf3 !important; }}
     </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; background-color: #f6f8fa; line-height: 1.6; width: 100%; min-height: 100vh;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #24292e; background-color: #f6f8fa;">
+
+    <!-- Hidden preheader text -->
+    <div style="display: none; font-size: 1px; color: #f6f8fa; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        {phrase_text[:90]}...
+    </div>
+
+    <!-- Wrapper Table -->
+    <table class="wrapper" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f6f8fa;">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+                
+                <!-- Container Table -->
+                <table class="container" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td class="header-bg header-padding" align="center" style="padding: 32px 20px 28px; background-color: #ffffff; border-bottom: 1px solid #e1e4e8;">
+                            <table border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <h1 class="brand-text" style="margin: 0; color: #1a1a1a; font-size: 18px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">
+                                            PSEUDOSAPIENS
+                                        </h1>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-top: 6px;">
+                                        <p class="subtitle-text" style="margin: 0; color: #586069; font-size: 13px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;">
+                                            #{phrase_id}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td class="content-bg content-padding" align="center" style="padding: 45px 30px; background-color: #ffffff;">
+                            
+                            <!-- Quote Container -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px;">
+                                <tr>
+                                    <td align="center">
+                                        <!-- Left Quote Mark -->
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td align="left" width="30" valign="top" style="padding-right: 10px;">
+                                                    <span class="subtitle-text" style="color: #586069; font-size: 36px; line-height: 1; font-family: Georgia, serif; opacity: 0.3;">"</span>
+                                                </td>
+                                                <td align="center">
+                                                    <p class="quote-text" style="margin: 0; color: #24292e; font-size: 22px; line-height: 1.55; font-style: italic; font-weight: 300; font-family: Georgia, 'Times New Roman', serif;">
+                                                        {phrase_text}
+                                                    </p>
+                                                </td>
+                                                <td align="right" width="30" valign="bottom" style="padding-left: 10px;">
+                                                    <span class="subtitle-text" style="color: #586069; font-size: 36px; line-height: 1; font-family: Georgia, serif; opacity: 0.3;">"</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Separator -->
+                    <tr>
+                        <td class="content-bg" align="center" style="padding: 0 30px 35px 30px; background-color: #ffffff;">
+                            <table border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="80" height="2" class="separator-line" style="background: linear-gradient(90deg, transparent 0%, #0366d6 50%, transparent 100%); font-size: 0; line-height: 0;">
+                                        &nbsp;
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer-bg footer-padding" align="center" style="padding: 24px 20px; background-color: #f6f8fa; border-top: 1px solid #e1e4e8;">
+                            <table border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <p class="footer-text" style="margin: 0; color: #6a737d; font-size: 12px; line-height: 1.5;">
+                                            Para cancelar esta suscripción, responde con<br>
+                                            <strong style="color: #586069;">UNSUBSCRIBE</strong>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+                <!-- End Container -->
+                
+            </td>
+        </tr>
+    </table>
+    <!-- End Wrapper -->
     
-    <div class="email-container" style="max-width: 580px; margin: 40px auto; border-radius: 8px; overflow: hidden;">
-        
-        <!-- Header minimalista adaptativo -->
-        <div class="header-content" style="padding: 32px 32px 24px;">
-            <div style="text-align: center;">
-                <h1 class="brand-title" style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.2px;">
-                    PSEUDOSAPIENS
-                </h1>
-                <p class="reflection-subtitle" style="margin: 4px 0 0; font-size: 13px; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">
-                    #{phrase_id}
-                </p>
-            </div>
-        </div>
-
-        <!-- Contenido principal -->
-        <div class="main-content" style="padding: 48px 24px 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px;">
-            
-            <!-- Frase elegante -->
-            <div style="text-align: center; margin-bottom: 32px; width: 100%; max-width: 460px;">
-                <blockquote style="margin: 0; padding: 0; border: none;">
-                    <p class="quote-text" style="margin: 0; font-size: 26px; font-weight: 400; line-height: 1.45; font-style: italic; letter-spacing: -0.4px; text-align: center;">
-                        "{phrase_text}"
-                    </p>
-                </blockquote>
-            </div>
-
-            <!-- Separador elegante centrado -->
-            <div style="width: 80px; height: 1px; opacity: 0.6;" class="separator-line"></div>
-
-        </div>
-
-        <!-- Footer minimalista adaptativo -->
-        <div class="footer-content" style="padding: 24px 32px;">
-            <div style="text-align: center;">
-                <p class="footer-unsubscribe" style="margin: 0; font-size: 11px; line-height: 1.4;">
-                    Para cancelar esta suscripción, responde con "UNSUBSCRIBE"
-                </p>
-            </div>
-        </div>
-
+    <!-- Dark mode meta tag for Apple Mail -->
+    <div style="display: none; white-space: nowrap; font: 15px courier; line-height: 0;">
+        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
     </div>
     
 </body>
 </html>""".strip()
-
 
 def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None:
     api_key = os.getenv('RESEND_API_KEY')
