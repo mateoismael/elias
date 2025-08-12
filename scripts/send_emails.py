@@ -84,66 +84,219 @@ def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> Li
 
 
 def build_email_html(phrase_id: str, phrase_text: str) -> str:
-    return f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pseudosapiens Daily</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; background-color: #0d1117; line-height: 1.6;">
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+    <title>Pseudosapiens Daily</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset styles */
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         
-        <div style="max-width: 580px; margin: 40px auto; background: #161b22; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #30363d;">
+        /* Prevent text scaling */
+        body, table, td, p, a, li, blockquote {{ 
+            -webkit-text-size-adjust: 100%; 
+            -ms-text-size-adjust: 100%; 
+        }}
+        
+        /* Dark mode detection and styles */
+        :root {{
+            color-scheme: light dark;
+        }}
+        
+        /* Light theme (default) */
+        .email-container {{
+            background: #ffffff !important;
+            border: 1px solid #e1e4e8 !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+        }}
+        
+        .header-content {{
+            background: #ffffff !important;
+            border-bottom: 1px solid #e1e4e8 !important;
+        }}
+        
+        .brand-title {{
+            color: #1a1a1a !important;
+        }}
+        
+        .reflection-subtitle {{
+            color: #586069 !important;
+        }}
+        
+        .quote-text {{
+            color: #24292e !important;
+        }}
+        
+        .footer-content {{
+            background: #f6f8fa !important;
+            border-top: 1px solid #e1e4e8 !important;
+        }}
+        
+        .footer-brand {{
+            color: #586069 !important;
+        }}
+        
+        .footer-unsubscribe {{
+            color: #6a737d !important;
+        }}
+        
+        .separator-line {{
+            background: linear-gradient(90deg, transparent 0%, #0366d6 20%, #0366d6 80%, transparent 100%) !important;
+        }}
+        
+        /* Dark theme */
+        @media (prefers-color-scheme: dark) {{
+            body {{
+                background-color: #0d1117 !important;
+            }}
             
-            <!-- Header minimalista oscuro -->
-            <div style="background: #161b22; padding: 32px 32px 24px; border-bottom: 1px solid #30363d;">
-                <div style="text-align: center;">
-                    <h1 style="margin: 0; font-size: 18px; font-weight: 600; color: #f0f6fc; letter-spacing: -0.2px;">
-                        PSEUDOSAPIENS
-                    </h1>
-                    <p style="margin: 4px 0 0; color: #8b949e; font-size: 13px; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">
-                        Daily Reflection #{phrase_id}
+            .email-container {{
+                background: #161b22 !important;
+                border: 1px solid #30363d !important;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+            }}
+            
+            .header-content {{
+                background: #161b22 !important;
+                border-bottom: 1px solid #30363d !important;
+            }}
+            
+            .brand-title {{
+                color: #f0f6fc !important;
+            }}
+            
+            .reflection-subtitle {{
+                color: #8b949e !important;
+            }}
+            
+            .quote-text {{
+                color: #e6edf3 !important;
+            }}
+            
+            .footer-content {{
+                background: #0d1117 !important;
+                border-top: 1px solid #30363d !important;
+            }}
+            
+            .footer-brand {{
+                color: #8b949e !important;
+            }}
+            
+            .footer-unsubscribe {{
+                color: #6e7681 !important;
+            }}
+            
+            .separator-line {{
+                background: linear-gradient(90deg, transparent 0%, #58a6ff 20%, #58a6ff 80%, transparent 100%) !important;
+            }}
+        }}
+        
+        /* Mobile styles */
+        @media only screen and (max-width: 600px) {{
+            .email-container {{
+                width: 100% !important;
+                margin: 16px auto !important;
+                max-width: calc(100% - 32px) !important;
+            }}
+            
+            .header-content {{
+                padding: 24px 16px 20px !important;
+            }}
+            
+            .main-content {{
+                padding: 32px 16px 24px !important;
+            }}
+            
+            .quote-text {{
+                font-size: 20px !important;
+                line-height: 1.4 !important;
+                max-width: 100% !important;
+                letter-spacing: -0.2px !important;
+            }}
+            
+            .brand-title {{
+                font-size: 16px !important;
+            }}
+            
+            .reflection-subtitle {{
+                font-size: 12px !important;
+            }}
+            
+            .footer-content {{
+                padding: 20px 16px !important;
+            }}
+            
+            .separator-line {{
+                width: 60px !important;
+            }}
+        }}
+        
+        @media only screen and (max-width: 480px) {{
+            .quote-text {{
+                font-size: 18px !important;
+            }}
+        }}
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; background-color: #f6f8fa; line-height: 1.6; width: 100%; min-height: 100vh;">
+    
+    <div class="email-container" style="max-width: 580px; margin: 40px auto; border-radius: 8px; overflow: hidden;">
+        
+        <!-- Header minimalista adaptativo -->
+        <div class="header-content" style="padding: 32px 32px 24px;">
+            <div style="text-align: center;">
+                <h1 class="brand-title" style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.2px;">
+                    PSEUDOSAPIENS
+                </h1>
+                <p class="reflection-subtitle" style="margin: 4px 0 0; font-size: 13px; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">
+                    #{phrase_id}
+                </p>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="main-content" style="padding: 48px 24px 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px;">
+            
+            <!-- Frase elegante -->
+            <div style="text-align: center; margin-bottom: 32px; width: 100%; max-width: 460px;">
+                <blockquote style="margin: 0; padding: 0; border: none;">
+                    <p class="quote-text" style="margin: 0; font-size: 26px; font-weight: 400; line-height: 1.45; font-style: italic; letter-spacing: -0.4px; text-align: center;">
+                        "{phrase_text}"
                     </p>
-                </div>
+                </blockquote>
             </div>
 
-            <!-- Contenido principal -->
-            <div style="padding: 48px 40px 40px;">
-                
-                <!-- Frase elegante -->
-                <div style="text-align: center; margin-bottom: 48px;">
-                    <blockquote style="margin: 0 auto; padding: 0; border: none; max-width: 480px;">
-                        <p style="margin: 0; font-size: 26px; font-weight: 400; line-height: 1.45; color: #e6edf3; font-style: italic; letter-spacing: -0.4px; text-align: center;">
-                            "{phrase_text}"
-                        </p>
-                    </blockquote>
-                </div>
-
-                <!-- Separador elegante centrado -->
-                <div style="display: flex; justify-content: center; align-items: center; margin: 0;">
-                    <div style="width: 80px; height: 1px; background: linear-gradient(90deg, transparent 0%, #58a6ff 20%, #58a6ff 80%, transparent 100%); opacity: 0.6;"></div>
-                </div>
-
-            </div>
-
-            <!-- Footer minimalista oscuro -->
-            <div style="background: #0d1117; padding: 24px 32px; border-top: 1px solid #30363d;">
-                <div style="text-align: center;">
-                    <p style="margin: 0 0 8px; color: #8b949e; font-size: 13px; letter-spacing: 0.3px;">
-                        <strong>PSEUDOSAPIENS.COM</strong>
-                    </p>
-                    <p style="margin: 0; color: #6e7681; font-size: 11px; line-height: 1.4;">
-                        Para cancelar esta suscripción, responde con "UNSUBSCRIBE"
-                    </p>
-                </div>
-            </div>
+            <!-- Separador elegante centrado -->
+            <div style="width: 80px; height: 1px; opacity: 0.6;" class="separator-line"></div>
 
         </div>
-        
-    </body>
-    </html>
-    """.strip()
+
+        <!-- Footer minimalista adaptativo -->
+        <div class="footer-content" style="padding: 24px 32px;">
+            <div style="text-align: center;">
+                <p class="footer-unsubscribe" style="margin: 0; font-size: 11px; line-height: 1.4;">
+                    Para cancelar esta suscripción, responde con "UNSUBSCRIBE"
+                </p>
+            </div>
+        </div>
+
+    </div>
+    
+</body>
+</html>""".strip()
 
 
 def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None:
@@ -201,7 +354,7 @@ def main(argv: List[str]) -> int:
     else:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
 
-    subject = f"Daily Reflection #{phrase_id} • Pseudosapiens"
+    subject = f"#{phrase_id} • Pseudosapiens"
     html = build_email_html(phrase_id, phrase_text)
 
     if dry_run:
