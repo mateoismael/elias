@@ -2,7 +2,7 @@ name: Send Motivational Phrases
 
 on:
   schedule:
-    - cron: "0 * * * *" # Every hour
+    - cron: "0 10-23,0-4 * * *" # Every hour from 5:00 AM to 11:59 PM Peru time (UTC-5)
   workflow_dispatch: {}
 
 permissions:

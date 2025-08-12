@@ -33,6 +33,14 @@ def current_hour_slot() -> int:
     return epoch // 3600
 
 
+def is_sending_hours() -> bool:
+    """Check if current UTC time corresponds to Peru sending hours (5:00 AM - 11:59 PM PET)."""
+    now = datetime.now(timezone.utc)
+    hour = now.hour
+    # Peru time = UTC-5, so 5 AM PET = 10 AM UTC, 11:59 PM PET = 4:59 AM UTC (next day)
+    return hour >= 10 or hour <= 4
+
+
 def get_forms(site_id: str, token: str) -> List[Dict]:
     r = requests.get(
         f"{NETLIFY_API}/sites/{site_id}/forms",
@@ -77,17 +85,83 @@ def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> Li
 
 def build_email_html(phrase_id: str, phrase_text: str) -> str:
     return f"""
-    <div style='font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.6'>
-      <h2 style='margin:0 0 12px'>Frase motivacional</h2>
-      <blockquote style='margin:12px 0; padding:12px 16px; border-left:4px solid #4f46e5; background:#f6f6ff'>
-        <p style='margin:0; font-size:16px'>{phrase_text}</p>
-        <small style='opacity:.7'>ID: {phrase_id}</small>
-      </blockquote>
-      <p style='font-size:12px; color:#666'>
-        Recibes este correo porque te suscribiste en nuestro formulario.
-        Para dejar de recibir, responde a este correo con "UNSUBSCRIBE".
-      </p>
-    </div>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tu Frase Motivacional Diaria</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+            
+            <!-- Header con gradiente -->
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 50%, #42a5f5 100%); padding: 40px 30px; text-align: center; border-radius: 0 0 20px 20px;">
+                <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">
+                    ✨ Tu Momento de Inspiración
+                </h1>
+                <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 300;">
+                    Frase #{phrase_id} • {datetime.now().strftime('%d de %B, %Y')}
+                </p>
+            </div>
+
+            <!-- Contenido principal -->
+            <div style="padding: 40px 30px;">
+                
+                <!-- Frase principal con diseño moderno -->
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 35px; border-radius: 16px; text-align: center; margin: 0 0 30px; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite;"></div>
+                    <blockquote style="margin: 0; position: relative; z-index: 1;">
+                        <p style="margin: 0; color: white; font-size: 22px; font-weight: 600; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-style: italic;">
+                            "{phrase_text}"
+                        </p>
+                    </blockquote>
+                </div>
+
+                <!-- Sección motivacional -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <div style="display: inline-block; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); padding: 2px; border-radius: 50px;">
+                        <div style="background: white; padding: 12px 24px; border-radius: 50px;">
+                            <p style="margin: 0; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 16px;">
+                                💪 ¡Es tu momento de brillar!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call to action -->
+                <div style="text-align: center; margin: 35px 0;">
+                    <p style="margin: 0 0 20px; color: #555; font-size: 16px; line-height: 1.5;">
+                        Comparte esta inspiración con alguien que la necesite hoy
+                    </p>
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 14px 28px; border-radius: 50px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                        <span style="color: white; font-weight: 600; font-size: 16px; text-decoration: none;">
+                            🌟 Que tengas un día increíble
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer elegante -->
+            <div style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
+                <div style="text-align: center;">
+                    <p style="margin: 0 0 8px; color: #6c757d; font-size: 14px;">
+                        <strong>Pseudosapiens</strong> • Inspiración diaria
+                    </p>
+                    <p style="margin: 0; color: #6c757d; font-size: 12px; line-height: 1.4;">
+                        Recibes este correo porque te suscribiste a nuestras frases motivacionales.<br>
+                        Para cancelar tu suscripción, responde con "UNSUBSCRIBE".
+                    </p>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Espaciado final -->
+        <div style="height: 40px;"></div>
+    </body>
+    </html>
     """.strip()
 
 
@@ -114,6 +188,11 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None
 
 def main(argv: List[str]) -> int:
     dry_run = "--dry-run" in argv
+
+    # Check if we're in sending hours (5:00 AM - 11:59 PM Peru time)
+    if not dry_run and not is_sending_hours():
+        print("[INFO] Fuera del horario de envío (5:00 AM - 11:59 PM hora de Perú). No se envían frases.")
+        return 0
 
     # Config
     csv_path = os.getenv('PHRASES_CSV', 'frases_pilot.csv')
