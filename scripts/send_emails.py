@@ -90,76 +90,57 @@ def build_email_html(phrase_id: str, phrase_text: str) -> str:
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tu Frase Motivacional Diaria</title>
+        <title>Pseudosapiens Daily</title>
     </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
-        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+    <body style="margin: 0; padding: 0; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; background-color: #0d1117; line-height: 1.6;">
+        
+        <div style="max-width: 580px; margin: 40px auto; background: #161b22; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #30363d;">
             
-            <!-- Header con gradiente -->
-            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 50%, #42a5f5 100%); padding: 40px 30px; text-align: center; border-radius: 0 0 20px 20px;">
-                <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">
-                    ✨ Tu Momento de Inspiración
-                </h1>
-                <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 300;">
-                    Frase #{phrase_id} • {datetime.now().strftime('%d de %B, %Y')}
-                </p>
+            <!-- Header minimalista oscuro -->
+            <div style="background: #161b22; padding: 32px 32px 24px; border-bottom: 1px solid #30363d;">
+                <div style="text-align: center;">
+                    <h1 style="margin: 0; font-size: 18px; font-weight: 600; color: #f0f6fc; letter-spacing: -0.2px;">
+                        PSEUDOSAPIENS
+                    </h1>
+                    <p style="margin: 4px 0 0; color: #8b949e; font-size: 13px; font-weight: 400; letter-spacing: 0.5px; text-transform: uppercase;">
+                        Daily Reflection #{phrase_id}
+                    </p>
+                </div>
             </div>
 
             <!-- Contenido principal -->
-            <div style="padding: 40px 30px;">
+            <div style="padding: 48px 40px 40px;">
                 
-                <!-- Frase principal con diseño moderno -->
-                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 35px; border-radius: 16px; text-align: center; margin: 0 0 30px; position: relative; overflow: hidden;">
-                    <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite;"></div>
-                    <blockquote style="margin: 0; position: relative; z-index: 1;">
-                        <p style="margin: 0; color: white; font-size: 22px; font-weight: 600; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-style: italic;">
+                <!-- Frase elegante -->
+                <div style="text-align: center; margin-bottom: 48px;">
+                    <blockquote style="margin: 0 auto; padding: 0; border: none; max-width: 480px;">
+                        <p style="margin: 0; font-size: 26px; font-weight: 400; line-height: 1.45; color: #e6edf3; font-style: italic; letter-spacing: -0.4px; text-align: center;">
                             "{phrase_text}"
                         </p>
                     </blockquote>
                 </div>
 
-                <!-- Sección motivacional -->
-                <div style="text-align: center; margin: 30px 0;">
-                    <div style="display: inline-block; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); padding: 2px; border-radius: 50px;">
-                        <div style="background: white; padding: 12px 24px; border-radius: 50px;">
-                            <p style="margin: 0; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 16px;">
-                                💪 ¡Es tu momento de brillar!
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Call to action -->
-                <div style="text-align: center; margin: 35px 0;">
-                    <p style="margin: 0 0 20px; color: #555; font-size: 16px; line-height: 1.5;">
-                        Comparte esta inspiración con alguien que la necesite hoy
-                    </p>
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 14px 28px; border-radius: 50px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                        <span style="color: white; font-weight: 600; font-size: 16px; text-decoration: none;">
-                            🌟 Que tengas un día increíble
-                        </span>
-                    </div>
+                <!-- Separador elegante centrado -->
+                <div style="display: flex; justify-content: center; align-items: center; margin: 0;">
+                    <div style="width: 80px; height: 1px; background: linear-gradient(90deg, transparent 0%, #58a6ff 20%, #58a6ff 80%, transparent 100%); opacity: 0.6;"></div>
                 </div>
 
             </div>
 
-            <!-- Footer elegante -->
-            <div style="background: #f8f9fa; padding: 25px 30px; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
+            <!-- Footer minimalista oscuro -->
+            <div style="background: #0d1117; padding: 24px 32px; border-top: 1px solid #30363d;">
                 <div style="text-align: center;">
-                    <p style="margin: 0 0 8px; color: #6c757d; font-size: 14px;">
-                        <strong>Pseudosapiens</strong> • Inspiración diaria
+                    <p style="margin: 0 0 8px; color: #8b949e; font-size: 13px; letter-spacing: 0.3px;">
+                        <strong>PSEUDOSAPIENS.COM</strong>
                     </p>
-                    <p style="margin: 0; color: #6c757d; font-size: 12px; line-height: 1.4;">
-                        Recibes este correo porque te suscribiste a nuestras frases motivacionales.<br>
-                        Para cancelar tu suscripción, responde con "UNSUBSCRIBE".
+                    <p style="margin: 0; color: #6e7681; font-size: 11px; line-height: 1.4;">
+                        Para cancelar esta suscripción, responde con "UNSUBSCRIBE"
                     </p>
                 </div>
             </div>
 
         </div>
         
-        <!-- Espaciado final -->
-        <div style="height: 40px;"></div>
     </body>
     </html>
     """.strip()
@@ -220,7 +201,7 @@ def main(argv: List[str]) -> int:
     else:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
 
-    subject = f"Tu frase motivacional ({phrase_id})"
+    subject = f"Daily Reflection #{phrase_id} • Pseudosapiens"
     html = build_email_html(phrase_id, phrase_text)
 
     if dry_run:
