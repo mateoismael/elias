@@ -192,7 +192,7 @@ def main(argv: List[str]) -> int:
     else:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
 
-    subject = f"Daily Reflection #{phrase_id} • Pseudosapiens"
+    subject = f"Frase #{phrase_id} • Pseudosapiens"
     html = build_email_html(phrase_id, phrase_text)
 
     if dry_run:
