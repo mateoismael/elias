@@ -7,6 +7,13 @@ from datetime import datetime, timezone
 from typing import List, Dict
 import time
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv is optional
+
 
 # Optional import: if resend is not installed, allow dry-run
 try:
@@ -94,61 +101,69 @@ def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> Li
 
 def build_email_html(phrase_id: str, phrase_text: str) -> str:
     """
-    Versión ultra minimalista para evitar el problema de 'texto citado' en Gmail.
-    Mantiene el diseño pero con mínimo código.
+    Email ultra personal - como un mensaje de texto de un amigo.
+    Sin footers corporativos ni elementos que parezcan newsletter.
     """
     
-    # Detectar hora para tema (6 AM - 6 PM = claro, resto = oscuro)
-    from datetime import datetime
-    hour = datetime.now().hour
-    is_dark = hour >= 18 or hour < 6
-    
-    # Colores según tema
-    if is_dark:
-        bg = "#0d1117"
-        card = "#161b22"
-        text = "#e6edf3"
-        muted = "#8b949e"
-        border = "#30363d"
-    else:
-        bg = "#f6f8fa"
-        card = "#ffffff"
-        text = "#24292e"
-        muted = "#586069"
-        border = "#e1e4e8"
-    
-    # HTML ultra minimalista - sin CSS innecesario
+    # HTML mínimo que parece mensaje personal
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>P</title>
 </head>
-<body style="margin:0;padding:20px;background:{bg};font-family:-apple-system,system-ui,sans-serif">
-<table align="center" width="100%" style="max-width:600px">
-<tr><td style="background:{card};border-radius:8px;border:1px solid {border}">
-<div style="padding:30px 20px;text-align:center;border-bottom:1px solid {border}">
-<h1 style="margin:0;color:{text};font-size:18px;letter-spacing:2px">PSEUDOSAPIENS</h1>
-<p style="margin:5px 0 0;color:{muted};font-size:13px">#{phrase_id}</p>
-</div>
-<div style="padding:40px 30px;text-align:center">
-<p style="color:{text};font-size:22px;line-height:1.5;font-style:italic;margin:0">"{phrase_text}"</p>
-</div>
-<div style="padding:20px;text-align:center;border-top:1px solid {border}">
-<p style="margin:0;color:{muted};font-size:11px">
-<a href="https://pseudosapiens.com/preferences" style="color:{muted};text-decoration:none">Gestionar preferencias</a> | 
-<a href="mailto:noreply@pseudosapiens.com?subject=UNSUBSCRIBE" style="color:{muted};text-decoration:none">Desuscribirse</a>
+<body style="margin:0;padding:20px;font-family:system-ui,sans-serif;line-height:1.5;color:#333">
+
+<p style="margin:0 0 20px;font-size:16px">
+Hola! Espero que tengas un buen día.
 </p>
-</div>
-</td></tr>
-</table>
+
+<p style="margin:20px 0;font-size:16px;color:#555">
+Quería compartir esto contigo:
+</p>
+
+<p style="margin:20px 0;font-size:17px;font-style:italic;color:#444;padding:15px;background:#f8f9fa;border-left:3px solid #ddd">
+{phrase_text}
+</p>
+
+<p style="margin:20px 0 5px;font-size:14px;color:#666">
+Un saludo,<br>
+Pseudosapiens
+</p>
+
+<p style="margin:30px 0 0;font-size:12px;color:#999">
+<a href="mailto:reflexiones@pseudosapiens.com?subject=No más emails" style="color:#999">No recibir más</a>
+</p>
+
+<!-- Timestamp invisible para evitar agrupación en Gmail -->
+<div style="display:none;font-size:1px;color:transparent">{int(time.time())}</div>
+
 </body>
 </html>"""
-    return html + f"\n<!-- build:{int(time.time())} -->"
+    return html
 
 
-def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None:
+def build_email_text(phrase_text: str) -> str:
+    """
+    Texto plano ultra personal - como un mensaje de WhatsApp.
+    """
+    return f"""Hola! Espero que tengas un buen día.
+
+Quería compartir esto contigo:
+
+{phrase_text}
+
+Un saludo,
+Pseudosapiens
+
+---
+Si no quieres recibir más emails, solo responde "NO MÁS"
+
+[{int(time.time())}]
+"""
+
+
+def send_via_resend(sender: str, to: List[str], subject: str, html: str, text: str = "") -> None:
     """
     Envia correos con Resend cumpliendo el límite de 2 req/seg y reintenta si hay 429.
     - Envia 1 correo por destinatario para preservar privacidad.
@@ -183,13 +198,23 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None
         attempts = 0
         while True:
             try:
-                resend.Emails.send({
+                email_data = {
                     "from": sender,
                     "to": [recipient],  # Envío individual
                     "subject": subject,
                     "html": html,
-                    "headers": {"Idempotency-Key": idem}
-                })
+                    "reply_to": "reflexiones@pseudosapiens.com",
+                    "headers": {
+                        "Idempotency-Key": idem,
+                        "Message-ID": f"<{idem}@pseudosapiens.com>"
+                    }
+                }
+                
+                # Add text version if provided
+                if text:
+                    email_data["text"] = text
+                
+                resend.Emails.send(email_data)
                 # Asegura <= 2 req/seg (0.5s); usamos 0.6s como colchón
                 time.sleep(throttle_seconds)
                 break
@@ -220,6 +245,7 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None
 
 def main(argv: List[str]) -> int:
     dry_run = "--dry-run" in argv
+    test_mode = "--test" in argv or os.getenv('TEST_MODE', 'false').lower() == 'true'
 
     # Check if we're in sending hours (5:00 AM - 11:59 PM Peru time)
     if not dry_run and not is_sending_hours():
@@ -244,7 +270,18 @@ def main(argv: List[str]) -> int:
     phrase_text = phrase.get('text') or ''
 
     all_subscribers: List[Dict[str, str]] = []
-    if site_id and token:
+    
+    # Test mode: use only test emails
+    if test_mode:
+        test_emails = os.getenv('TEST_EMAILS', '').split(',')
+        test_emails = [email.strip() for email in test_emails if email.strip()]
+        if test_emails:
+            all_subscribers = [{'email': email, 'frequency': 1} for email in test_emails]
+            print(f"[TEST] Usando {len(test_emails)} emails de prueba: {test_emails}")
+        else:
+            print("[TEST] No se encontraron TEST_EMAILS. Agrega TEST_EMAILS=tu-email@gmail.com en .env")
+            return 0
+    elif site_id and token:
         try:
             all_subscribers = get_subscribers_from_netlify(form_name, site_id, token)
         except Exception as e:
@@ -262,8 +299,19 @@ def main(argv: List[str]) -> int:
         if slot % frequency == 0:
             recipients.append(email)
 
-    subject = f"Frase #{phrase_id} • Pseudosapiens"
+    # Ultra personal subjects that don't sound like newsletters
+    subjects = [
+        "Hola",
+        "Buenos días",
+        "Espero estés bien", 
+        "Algo que me hizo pensar",
+        "Quería compartir esto contigo"
+    ]
+    # Choose subject based on phrase_id for consistency but avoid promotional look
+    subject_index = hash(phrase_id) % len(subjects)
+    subject = subjects[subject_index]
     html = build_email_html(phrase_id, phrase_text)
+    text = build_email_text(phrase_text)
 
     if dry_run:
         print("[DRY-RUN] HourSlot:", slot, "Index:", idx)
@@ -271,7 +319,7 @@ def main(argv: List[str]) -> int:
         print(f"[DRY-RUN] Total suscriptores: {len(all_subscribers)}")
         print(f"[DRY-RUN] Filtrados para esta hora: {len(recipients)}")
         for sub in all_subscribers[:5]:  # Show first 5 for debugging
-            will_receive = "✓" if slot % sub['frequency'] == 0 else "✗"
+            will_receive = "SI" if slot % sub['frequency'] == 0 else "NO"
             print(f"[DRY-RUN] {sub['email']} (cada {sub['frequency']}h) {will_receive}")
         return 0
 
@@ -280,8 +328,8 @@ def main(argv: List[str]) -> int:
         return 0
 
     try:
-        send_via_resend(sender, recipients, subject, html)
-        print(f"[OK] Enviados {len(recipients)} correos de {len(all_subscribers)} suscriptores: {phrase_id}")
+        send_via_resend(sender, recipients, subject, html, text)
+        print(f"[OK] Enviados {len(recipients)} correos de {len(all_subscribers)} suscriptores con asunto: {subject}")
         return 0
     except Exception as e:
         print("[ERROR] Falló el envío:", e)
