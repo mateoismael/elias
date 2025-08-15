@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pseudosapiens - Suscripción</title>
+    <title>Gestionar Preferencias - Pseudosapiens</title>
     <meta
       name="description"
-      content="Suscríbete para recibir una frase motivacional aleatoria cada hora."
+      content="Actualiza tus preferencias de frecuencia o cancela tu suscripción."
     />
     <style>
       :root {
@@ -73,20 +73,41 @@
         cursor: pointer;
         font-weight: 600;
       }
+      .button-secondary {
+        background: transparent;
+        color: #666;
+        border-color: #ccc;
+      }
+      .button-secondary:hover {
+        background: #f5f5f5;
+      }
+      @media (prefers-color-scheme: dark) {
+        .button-secondary {
+          color: #aaa;
+          border-color: #444;
+        }
+        .button-secondary:hover {
+          background: #222;
+        }
+      }
       small {
         opacity: 0.7;
+      }
+      .actions {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
       }
     </style>
   </head>
   <body>
     <main class="card">
-      <h1>Suscríbete a Pseudosapiens</h1>
+      <h1>Gestionar Preferencias</h1>
       <p>
-        Recibe una frase aleatoria cada hora en tu correo. Gratis. Puedes darte
-        de baja cuando quieras.
+        Actualiza la frecuencia de tus frases o cancela tu suscripción.
       </p>
 
-      <!-- Netlify Forms: nombre del formulario "subscribe" -->
+      <!-- Formulario para actualizar preferencias -->
       <form
         name="subscribe"
         method="POST"
@@ -98,6 +119,7 @@
         <p hidden>
           <label>¿No completar: <input name="bot-field" /></label>
         </p>
+        
         <label for="email">Correo electrónico</label>
         <input
           id="email"
@@ -106,25 +128,45 @@
           placeholder="tu@email.com"
           required
         />
-        <label for="frequency">¿Con qué frecuencia te gustaría recibir frases?</label>
+        
+        <label for="frequency">Nueva frecuencia de frases</label>
         <select id="frequency" name="frequency" required>
-          <option value="3" selected>Cada 3 horas (recomendado)</option>
+          <option value="3">Cada 3 horas (recomendado)</option>
           <option value="1">Cada hora (intensivo)</option>
           <option value="6">Cada 6 horas (moderado)</option>
           <option value="24">Una vez al día</option>
         </select>
-        <button type="submit">Quiero suscribirme</button>
-        <small
-          >Al enviar, aceptas recibir correos. Incluimos instrucciones para
-          cancelar en cada email.</small
-        >
+        
+        <div class="actions">
+          <button type="submit">Actualizar Preferencias</button>
+          <button type="button" class="button-secondary" onclick="unsubscribe()">
+            Desuscribirse Completamente
+          </button>
+        </div>
+        
+        <small>
+          Al actualizar, confirmas que quieres cambiar tu frecuencia de frases.
+        </small>
       </form>
 
       <hr style="margin: 20px 0; opacity: 0.2" />
       <p>
-        <strong>Privacidad:</strong> Solo usamos tu correo para enviarte frases.
-        No compartimos tu información.
+        <a href="/">← Volver al inicio</a>
       </p>
     </main>
+
+    <script>
+      function unsubscribe() {
+        const email = document.getElementById('email').value;
+        if (!email) {
+          alert('Por favor ingresa tu correo electrónico primero');
+          return;
+        }
+        
+        if (confirm('¿Estás seguro que quieres cancelar tu suscripción?')) {
+          window.location.href = `mailto:noreply@pseudosapiens.com?subject=UNSUBSCRIBE&body=Por favor cancela mi suscripción para: ${email}`;
+        }
+      }
+    </script>
   </body>
 </html>

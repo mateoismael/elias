@@ -10,3 +10,8 @@
   from = "/success"
   to = "/success.html"
   status = 200
+
+[[redirects]]
+  from = "/preferences"
+  to = "/preferences.html"
+  status = 200

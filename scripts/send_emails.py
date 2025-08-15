@@ -62,26 +62,34 @@ def get_submissions(form_id: str, token: str) -> List[Dict]:
     return r.json()
 
 
-def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> List[str]:
+def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> List[Dict[str, str]]:
+    """Get subscribers with their preferences from Netlify Forms."""
     forms = get_forms(site_id, token)
     form = next((f for f in forms if f.get('name') == form_name), None)
     if not form:
         return []
     subs = get_submissions(form.get('id'), token)
-    emails = []
+    
+    # Track latest preference for each email
+    email_prefs = {}
     for s in subs:
         data = s.get('data') or {}
         email = data.get('email') or data.get('Email') or data.get('correo')
+        frequency = data.get('frequency', '1')  # default to every hour
+        
         if email:
-            emails.append(str(email).strip())
-    # unique preserving order
-    seen = set()
-    uniq = []
-    for e in emails:
-        if e and e not in seen:
-            seen.add(e)
-            uniq.append(e)
-    return uniq
+            email = str(email).strip()
+            # Keep the latest submission for each email
+            submission_time = s.get('created_at', '')
+            if email not in email_prefs or submission_time > email_prefs[email]['time']:
+                email_prefs[email] = {
+                    'frequency': int(frequency),
+                    'time': submission_time
+                }
+    
+    # Return list of email + frequency pairs
+    return [{'email': email, 'frequency': prefs['frequency']} 
+            for email, prefs in email_prefs.items()]
 
 
 def build_email_html(phrase_id: str, phrase_text: str) -> str:
@@ -128,7 +136,10 @@ def build_email_html(phrase_id: str, phrase_text: str) -> str:
 <p style="color:{text};font-size:22px;line-height:1.5;font-style:italic;margin:0">"{phrase_text}"</p>
 </div>
 <div style="padding:20px;text-align:center;border-top:1px solid {border}">
-<p style="margin:0;color:{muted};font-size:11px">Para cancelar responde UNSUBSCRIBE</p>
+<p style="margin:0;color:{muted};font-size:11px">
+<a href="https://pseudosapiens.com/preferences" style="color:{muted};text-decoration:none">Gestionar preferencias</a> | 
+<a href="mailto:noreply@pseudosapiens.com?subject=UNSUBSCRIBE" style="color:{muted};text-decoration:none">Desuscribirse</a>
+</p>
 </div>
 </td></tr>
 </table>
@@ -183,14 +194,24 @@ def main(argv: List[str]) -> int:
     phrase_id = phrase.get('id') or f"IDX{idx}"
     phrase_text = phrase.get('text') or ''
 
-    subscribers: List[str] = []
+    all_subscribers: List[Dict[str, str]] = []
     if site_id and token:
         try:
-            subscribers = get_subscribers_from_netlify(form_name, site_id, token)
+            all_subscribers = get_subscribers_from_netlify(form_name, site_id, token)
         except Exception as e:
             print(f"[WARN] No se pudieron obtener suscriptores de Netlify: {e}")
     else:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
+
+    # Filter subscribers based on their frequency preference
+    recipients = []
+    for subscriber in all_subscribers:
+        email = subscriber['email']
+        frequency = subscriber['frequency']
+        
+        # Send if current hour slot is divisible by user's frequency
+        if slot % frequency == 0:
+            recipients.append(email)
 
     subject = f"Frase #{phrase_id} • Pseudosapiens"
     html = build_email_html(phrase_id, phrase_text)
@@ -198,16 +219,20 @@ def main(argv: List[str]) -> int:
     if dry_run:
         print("[DRY-RUN] HourSlot:", slot, "Index:", idx)
         print(f"[DRY-RUN] Frase: {phrase_id} -> {phrase_text[:80]}{'...' if len(phrase_text)>80 else ''}")
-        print("[DRY-RUN] Suscriptores:", subscribers)
+        print(f"[DRY-RUN] Total suscriptores: {len(all_subscribers)}")
+        print(f"[DRY-RUN] Filtrados para esta hora: {len(recipients)}")
+        for sub in all_subscribers[:5]:  # Show first 5 for debugging
+            will_receive = "✓" if slot % sub['frequency'] == 0 else "✗"
+            print(f"[DRY-RUN] {sub['email']} (cada {sub['frequency']}h) {will_receive}")
         return 0
 
-    if not subscribers:
-        print("[INFO] No hay suscriptores. Nada que enviar.")
+    if not recipients:
+        print(f"[INFO] No hay destinatarios para esta hora (slot {slot}). {len(all_subscribers)} suscriptores totales.")
         return 0
 
     try:
-        send_via_resend(sender, subscribers, subject, html)
-        print(f"[OK] Enviados {len(subscribers)} correos: {phrase_id}")
+        send_via_resend(sender, recipients, subject, html)
+        print(f"[OK] Enviados {len(recipients)} correos de {len(all_subscribers)} suscriptores: {phrase_id}")
         return 0
     except Exception as e:
         print("[ERROR] Falló el envío:", e)
