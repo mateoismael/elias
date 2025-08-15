@@ -21,6 +21,22 @@
         padding: 24px;
         text-align: center;
       }
+      .tip-box {
+        background: #dbeafe;
+        border: 1px solid #3b82f6;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 16px 0;
+        color: #1e40af;
+        font-size: 0.9rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        .tip-box {
+          background: #1e3a8a;
+          border-color: #60a5fa;
+          color: #dbeafe;
+        }
+      }
     </style>
   </head>
   <body>
@@ -30,9 +46,9 @@
         <strong>¡Tu suscripción está activa!</strong> Recibirás tu primera frase 
         dentro de las próximas horas según la frecuencia que elegiste.
       </p>
-      <p style="background: #f0f9ff; padding: 12px; border-radius: 6px; border-left: 3px solid #0ea5e9;">
+      <div class="tip-box">
         💡 <strong>Tip:</strong> Marca nuestros emails como "importantes" para mejor entrega.
-      </p>
+      </div>
       <p>
         <a href="/preferences" style="font-weight: 600;">Cambiar frecuencia</a> • 
         <a href="/">Volver al inicio</a>
