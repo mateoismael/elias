@@ -155,18 +155,21 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None
     if resend is None:  # pragma: no cover
         raise RuntimeError('El paquete resend no está instalado.')
     resend.api_key = api_key
-    # Use an idempotency key to reduce duplicates within the same hour
+    
+    # Send individual emails for privacy - each user only sees their own email
     slot = str(current_hour_slot())
-    idem = hashlib.sha256((subject + "|" + slot).encode('utf-8')).hexdigest()
-    # Some SDKs support idempotency_key in headers or params; the Python SDK accepts it in send options via headers.
-    # If not supported, Resend ignores it.
-    resend.Emails.send({
-        "from": sender,
-        "to": to,
-        "subject": subject,
-        "html": html,
-        "headers": {"Idempotency-Key": idem}
-    })
+    
+    for recipient in to:
+        # Create unique idempotency key per recipient
+        idem = hashlib.sha256((subject + "|" + slot + "|" + recipient).encode('utf-8')).hexdigest()
+        
+        resend.Emails.send({
+            "from": sender,
+            "to": [recipient],  # Single recipient for privacy
+            "subject": subject,
+            "html": html,
+            "headers": {"Idempotency-Key": idem}
+        })
 
 
 def main(argv: List[str]) -> int:
