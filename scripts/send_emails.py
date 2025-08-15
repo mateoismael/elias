@@ -41,6 +41,35 @@ def current_hour_slot() -> int:
     return epoch // 3600
 
 
+def get_optimal_send_hours(frequency: int) -> List[int]:
+    """
+    Return optimal sending hours in Peru time for each frequency.
+    Returns list of hours (0-23) in Peru timezone.
+    """
+    # Convert Peru time to UTC for comparison (Peru = UTC-5)
+    if frequency == 24:  # Daily
+        return [13]  # 8:00 AM Peru = 13:00 UTC
+    elif frequency == 6:  # Every 6 hours  
+        return [13, 19, 1]  # 8:00 AM, 2:00 PM, 8:00 PM Peru
+    elif frequency == 3:  # Every 3 hours
+        return [13, 16, 19, 22, 1, 4]  # 8:00 AM, 11:00 AM, 2:00 PM, 5:00 PM, 8:00 PM, 11:00 PM Peru
+    else:  # Every hour (frequency == 1) or any other frequency
+        # All hours from 5 AM to 11 PM Peru (10:00 to 4:00 UTC next day)
+        return list(range(10, 24)) + list(range(0, 5))  # 10-23 UTC + 0-4 UTC
+
+
+def should_send_at_current_hour(frequency: int) -> bool:
+    """
+    Check if email should be sent at current UTC hour based on frequency.
+    Uses optimized sending times instead of modulo operation.
+    """
+    now = datetime.now(timezone.utc)
+    current_utc_hour = now.hour
+    
+    optimal_hours = get_optimal_send_hours(frequency)
+    return current_utc_hour in optimal_hours
+
+
 def is_sending_hours() -> bool:
     """Check if current UTC time corresponds to Peru sending hours (5:00 AM - 11:59 PM PET)."""
     now = datetime.now(timezone.utc)
@@ -289,14 +318,14 @@ def main(argv: List[str]) -> int:
     else:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
 
-    # Filter subscribers based on their frequency preference
+    # Filter subscribers based on their frequency preference and optimal hours
     recipients = []
     for subscriber in all_subscribers:
         email = subscriber['email']
         frequency = subscriber['frequency']
         
-        # Send if current hour slot is divisible by user's frequency
-        if slot % frequency == 0:
+        # Send if current hour is optimal for user's frequency
+        if should_send_at_current_hour(frequency):
             recipients.append(email)
 
     # Ultra personal subjects that don't sound like newsletters
@@ -319,7 +348,7 @@ def main(argv: List[str]) -> int:
         print(f"[DRY-RUN] Total suscriptores: {len(all_subscribers)}")
         print(f"[DRY-RUN] Filtrados para esta hora: {len(recipients)}")
         for sub in all_subscribers[:5]:  # Show first 5 for debugging
-            will_receive = "SI" if slot % sub['frequency'] == 0 else "NO"
+            will_receive = "SI" if should_send_at_current_hour(sub['frequency']) else "NO"
             print(f"[DRY-RUN] {sub['email']} (cada {sub['frequency']}h) {will_receive}")
         return 0
 
