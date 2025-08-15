@@ -149,27 +149,73 @@ def build_email_html(phrase_id: str, phrase_text: str) -> str:
 
 
 def send_via_resend(sender: str, to: List[str], subject: str, html: str) -> None:
+    """
+    Envia correos con Resend cumpliendo el límite de 2 req/seg y reintenta si hay 429.
+    - Envia 1 correo por destinatario para preservar privacidad.
+    - Usa Idempotency-Key por destinatario para evitar duplicados en reintentos.
+    - Respeta header Retry-After cuando Resend devuelve 429 (Too Many Requests).
+    Puedes ajustar el ritmo y reintentos con:
+      RESEND_THROTTLE_SECONDS (float, por defecto 0.6s) y RESEND_MAX_RETRIES (int, por defecto 8).
+    """
     api_key = os.getenv('RESEND_API_KEY')
     if not api_key:
         raise RuntimeError('Falta RESEND_API_KEY')
     if resend is None:  # pragma: no cover
         raise RuntimeError('El paquete resend no está instalado.')
     resend.api_key = api_key
-    
-    # Send individual emails for privacy - each user only sees their own email
+
+    # Config de throttling y reintentos
+    try:
+        throttle_seconds = float(os.getenv('RESEND_THROTTLE_SECONDS', '0.6'))
+    except Exception:
+        throttle_seconds = 0.6
+    try:
+        max_retries = int(os.getenv('RESEND_MAX_RETRIES', '8'))
+    except Exception:
+        max_retries = 8
+
     slot = str(current_hour_slot())
-    
+
     for recipient in to:
-        # Create unique idempotency key per recipient
+        # Idempotency por destinatario
         idem = hashlib.sha256((subject + "|" + slot + "|" + recipient).encode('utf-8')).hexdigest()
-        
-        resend.Emails.send({
-            "from": sender,
-            "to": [recipient],  # Single recipient for privacy
-            "subject": subject,
-            "html": html,
-            "headers": {"Idempotency-Key": idem}
-        })
+
+        attempts = 0
+        while True:
+            try:
+                resend.Emails.send({
+                    "from": sender,
+                    "to": [recipient],  # Envío individual
+                    "subject": subject,
+                    "html": html,
+                    "headers": {"Idempotency-Key": idem}
+                })
+                # Asegura <= 2 req/seg (0.5s); usamos 0.6s como colchón
+                time.sleep(throttle_seconds)
+                break
+            except Exception as e:
+                # Si es un 429, respetar Retry-After y reintentar
+                status = None
+                retry_after_s = None
+                resp = getattr(e, "response", None)
+                if resp is not None:
+                    status = getattr(resp, "status_code", None)
+                    headers = getattr(resp, "headers", {}) or {}
+                    ra = headers.get("Retry-After") or headers.get("retry-after")
+                    if ra:
+                        try:
+                            retry_after_s = int(ra)
+                        except Exception:
+                            retry_after_s = None
+
+                if status == 429:
+                    attempts += 1
+                    if attempts > max_retries:
+                        raise
+                    time.sleep(retry_after_s if retry_after_s is not None else 1.5)
+                    continue  # volver a intentar
+                # Otros errores: propagar
+                raise
 
 
 def main(argv: List[str]) -> int:
