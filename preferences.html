@@ -6,7 +6,7 @@
     <title>Gestionar Preferencias - Pseudosapiens</title>
     <meta
       name="description"
-      content="Actualiza tus preferencias de frecuencia o cancela tu suscripción."
+      content="Personaliza la frecuencia de tus frases motivacionales. Cambios instantáneos, sin duplicados."
     />
     <style>
       :root {
@@ -102,10 +102,15 @@
   </head>
   <body>
     <main class="card">
-      <h1>Gestionar Preferencias</h1>
+      <h1>Personaliza tu Experiencia</h1>
       <p>
-        Actualiza la frecuencia de tus frases o cancela tu suscripción.
+        Cambia la frecuencia de tus frases cuando quieras. Tus nuevas 
+        preferencias se activarán inmediatamente.
       </p>
+      <div style="background: #f8fafc; padding: 12px; border-radius: 6px; margin: 16px 0; border-left: 3px solid #6366f1;">
+        ✨ <strong>¿Cómo funciona?</strong> Solo recibirás emails en tu nueva frecuencia elegida. 
+        No habrá duplicados.
+      </div>
 
       <!-- Formulario para actualizar preferencias -->
       <form
@@ -129,12 +134,12 @@
           required
         />
         
-        <label for="frequency">Nueva frecuencia de frases</label>
+        <label for="frequency">Elige tu nueva frecuencia</label>
         <select id="frequency" name="frequency" required>
-          <option value="3">Cada 3 horas (recomendado)</option>
-          <option value="1">Cada hora (intensivo)</option>
-          <option value="6">Cada 6 horas (moderado)</option>
-          <option value="24">Una vez al día</option>
+          <option value="3">Cada 3 horas (equilibrado) • 7 frases/día</option>
+          <option value="1">Cada hora (intensivo) • 19 frases/día</option>
+          <option value="6">Cada 6 horas (moderado) • 3 frases/día</option>
+          <option value="24">Una vez al día (minimalista) • 1 frase/día</option>
         </select>
         
         <div class="actions">
@@ -145,7 +150,7 @@
         </div>
         
         <small>
-          Al actualizar, confirmas que quieres cambiar tu frecuencia de frases.
+          🔄 Los cambios son instantáneos. Tu próximo email seguirá la nueva frecuencia.
         </small>
       </form>
 
