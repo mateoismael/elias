@@ -98,6 +98,21 @@
         gap: 8px;
         margin-top: 16px;
       }
+      .info-box {
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 16px 0;
+        border-left: 3px solid #6366f1;
+        color: #374151;
+      }
+      @media (prefers-color-scheme: dark) {
+        .info-box {
+          background: #1e293b;
+          border-left-color: #818cf8;
+          color: #cbd5e1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -107,7 +122,7 @@
         Cambia la frecuencia de tus frases cuando quieras. Tus nuevas 
         preferencias se activarán inmediatamente.
       </p>
-      <div style="background: #f8fafc; padding: 12px; border-radius: 6px; margin: 16px 0; border-left: 3px solid #6366f1;">
+      <div class="info-box">
         ✨ <strong>¿Cómo funciona?</strong> Solo recibirás emails en tu nueva frecuencia elegida. 
         No habrá duplicados.
       </div>
