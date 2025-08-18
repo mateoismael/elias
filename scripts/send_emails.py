@@ -128,11 +128,60 @@ def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> Li
             for email, prefs in email_prefs.items()]
 
 
-def build_email_html(phrase_id: str, phrase_text: str) -> str:
+def get_contextual_greeting(hour_peru: int, frequency: int) -> tuple[str, str]:
+    """
+    Retorna (saludo, introducción) contextual según hora y frecuencia.
+    hour_peru: hora en Perú (0-23)
+    frequency: frecuencia del usuario (1, 3, 6, 24)
+    """
+    
+    # Saludos por momento del día
+    if 5 <= hour_peru < 12:  # Mañana
+        greetings = ["¡Buenos días!", "Arrancando el día", "Para empezar bien"]
+        if frequency == 24:  # Diario - más personal
+            intros = ["Que tengas un día increíble.", "Espero que sea un gran día para ti.", "Comenzamos con energía."]
+        else:  # Frecuente - más breve
+            intros = ["Un impulso matutino:", "Para arrancar:", "Energía para la mañana:"]
+    elif 12 <= hour_peru < 18:  # Tarde
+        greetings = ["Mitad del día", "Un momento para reflexionar", "Pausa para inspirarte"]
+        if frequency == 24:
+            intros = ["Espero que el día vaya bien.", "Un momento de reflexión:", "Para acompañar tu tarde:"]
+        else:
+            intros = ["Para la tarde:", "Mantén el impulso:", "Continuamos:"]
+    else:  # Noche (18-23)
+        greetings = ["Cerrando el día", "Para la tarde", "Reflexión nocturna"]
+        if frequency == 24:
+            intros = ["Para cerrar el día con buena energía.", "Espero que haya sido un buen día.", "Al final del día:"]
+        else:
+            intros = ["Para la noche:", "Cerrando bien:", "Última reflexión:"]
+    
+    # Selección determinística basada en hora
+    greeting_idx = hour_peru % len(greetings)
+    intro_idx = (hour_peru + 1) % len(intros)
+    
+    return greetings[greeting_idx], intros[intro_idx]
+
+
+def build_email_html(phrase_id: str, phrase_text: str, recipient_email: str = "", frequency: int = 1) -> str:
     """
     Email ultra personal - como un mensaje de texto de un amigo.
     Sin footers corporativos ni elementos que parezcan newsletter.
     """
+    
+    # Obtener hora actual en Perú (UTC-5)
+    import hashlib
+    from datetime import datetime, timezone, timedelta
+    
+    peru_tz = timezone(timedelta(hours=-5))
+    now_peru = datetime.now(peru_tz)
+    hour_peru = now_peru.hour
+    
+    # Usar la frecuencia pasada como parámetro
+    
+    greeting, intro = get_contextual_greeting(hour_peru, frequency)
+    
+    # Timestamp único por email (incluye destinatario para unicidad)
+    unique_timestamp = int(time.time() * 1000) + hash(recipient_email) % 1000
     
     # HTML mínimo que parece mensaje personal
     html = f"""<!DOCTYPE html>
@@ -144,11 +193,11 @@ def build_email_html(phrase_id: str, phrase_text: str) -> str:
 <body style="margin:0;padding:20px;font-family:system-ui,sans-serif;line-height:1.5;color:#333">
 
 <p style="margin:0 0 20px;font-size:16px">
-Hola! Espero que tengas un buen día.
+{greeting}
 </p>
 
 <p style="margin:20px 0;font-size:16px;color:#555">
-Quería compartir esto contigo:
+{intro}
 </p>
 
 <p style="margin:20px 0;font-size:17px;font-style:italic;color:#444;padding:15px;background:#f8f9fa;border-left:3px solid #ddd">
@@ -164,21 +213,35 @@ Pseudosapiens
 <a href="mailto:reflexiones@pseudosapiens.com?subject=No más emails" style="color:#999">No recibir más</a>
 </p>
 
-<!-- Timestamp invisible para evitar agrupación en Gmail -->
-<div style="display:none;font-size:1px;color:transparent">{int(time.time())}</div>
+<!-- Timestamp invisible único para evitar agrupación en Gmail -->
+<div style="display:none;font-size:1px;color:transparent">{unique_timestamp}</div>
 
 </body>
 </html>"""
     return html
 
 
-def build_email_text(phrase_text: str) -> str:
+def build_email_text(phrase_text: str, recipient_email: str = "", frequency: int = 1) -> str:
     """
     Texto plano ultra personal - como un mensaje de WhatsApp.
     """
-    return f"""Hola! Espero que tengas un buen día.
+    # Obtener hora actual en Perú (UTC-5)
+    from datetime import datetime, timezone, timedelta
+    
+    peru_tz = timezone(timedelta(hours=-5))
+    now_peru = datetime.now(peru_tz)
+    hour_peru = now_peru.hour
+    
+    # Usar la frecuencia pasada como parámetro
+    
+    greeting, intro = get_contextual_greeting(hour_peru, frequency)
+    
+    # Timestamp único por email
+    unique_timestamp = int(time.time() * 1000) + hash(recipient_email) % 1000
+    
+    return f"""{greeting}
 
-Quería compartir esto contigo:
+{intro}
 
 {phrase_text}
 
@@ -188,8 +251,91 @@ Pseudosapiens
 ---
 Si no quieres recibir más emails, solo responde "NO MÁS"
 
-[{int(time.time())}]
+[{unique_timestamp}]
 """
+
+
+def send_via_resend_with_context(sender: str, recipients_data: List[Dict], subject: str, phrase_id: str, phrase_text: str) -> None:
+    """
+    Envia correos con contexto personalizado por destinatario.
+    recipients_data: lista de {'email': str, 'frequency': int}
+    """
+    api_key = os.getenv('RESEND_API_KEY')
+    if not api_key:
+        raise RuntimeError('Falta RESEND_API_KEY')
+    if resend is None:  # pragma: no cover
+        raise RuntimeError('El paquete resend no está instalado.')
+    resend.api_key = api_key
+
+    # Config de throttling y reintentos
+    try:
+        throttle_seconds = float(os.getenv('RESEND_THROTTLE_SECONDS', '0.6'))
+    except Exception:
+        throttle_seconds = 0.6
+    try:
+        max_retries = int(os.getenv('RESEND_MAX_RETRIES', '8'))
+    except Exception:
+        max_retries = 8
+
+    slot = str(current_hour_slot())
+
+    for recipient_data in recipients_data:
+        email = recipient_data['email']
+        frequency = recipient_data['frequency']
+        
+        # Generar contenido personalizado para este destinatario
+        html = build_email_html(phrase_id, phrase_text, email, frequency)
+        text = build_email_text(phrase_text, email, frequency)
+        
+        # Idempotency por destinatario
+        idem = hashlib.sha256((subject + "|" + slot + "|" + email).encode('utf-8')).hexdigest()
+
+        attempts = 0
+        while True:
+            try:
+                email_data = {
+                    "from": sender,
+                    "to": [email],  # Envío individual
+                    "subject": subject,
+                    "html": html,
+                    "reply_to": "reflexiones@pseudosapiens.com",
+                    "headers": {
+                        "Idempotency-Key": idem,
+                        "Message-ID": f"<{idem}@pseudosapiens.com>"
+                    }
+                }
+                
+                # Add text version if provided
+                if text:
+                    email_data["text"] = text
+                
+                resend.Emails.send(email_data)
+                # Asegura <= 2 req/seg (0.5s); usamos 0.6s como colchón
+                time.sleep(throttle_seconds)
+                break
+            except Exception as e:
+                # Si es un 429, respetar Retry-After y reintentar
+                status = None
+                retry_after_s = None
+                resp = getattr(e, "response", None)
+                if resp is not None:
+                    status = getattr(resp, "status_code", None)
+                    headers = getattr(resp, "headers", {}) or {}
+                    ra = headers.get("Retry-After") or headers.get("retry-after")
+                    if ra:
+                        try:
+                            retry_after_s = int(ra)
+                        except Exception:
+                            retry_after_s = None
+
+                if status == 429:
+                    attempts += 1
+                    if attempts > max_retries:
+                        raise
+                    time.sleep(retry_after_s if retry_after_s is not None else 1.5)
+                    continue  # volver a intentar
+                # Otros errores: propagar
+                raise
 
 
 def send_via_resend(sender: str, to: List[str], subject: str, html: str, text: str = "") -> None:
@@ -319,14 +465,17 @@ def main(argv: List[str]) -> int:
         print("[INFO] NETLIFY_SITE_ID o NETLIFY_ACCESS_TOKEN no configurados; 0 suscriptores.")
 
     # Filter subscribers based on their frequency preference and optimal hours
-    recipients = []
+    recipients_with_frequency = []
     for subscriber in all_subscribers:
         email = subscriber['email']
         frequency = subscriber['frequency']
         
         # Send if current hour is optimal for user's frequency
         if should_send_at_current_hour(frequency):
-            recipients.append(email)
+            recipients_with_frequency.append({'email': email, 'frequency': frequency})
+    
+    # Mantener lista simple para compatibilidad
+    recipients = [r['email'] for r in recipients_with_frequency]
 
     # Ultra personal subjects that don't sound like newsletters
     subjects = [
@@ -339,8 +488,8 @@ def main(argv: List[str]) -> int:
     # Choose subject based on phrase_id for consistency but avoid promotional look
     subject_index = hash(phrase_id) % len(subjects)
     subject = subjects[subject_index]
-    html = build_email_html(phrase_id, phrase_text)
-    text = build_email_text(phrase_text)
+    
+    # No generar HTML/text aquí - se hará individualmente para cada destinatario
 
     if dry_run:
         print("[DRY-RUN] HourSlot:", slot, "Index:", idx)
@@ -357,7 +506,7 @@ def main(argv: List[str]) -> int:
         return 0
 
     try:
-        send_via_resend(sender, recipients, subject, html, text)
+        send_via_resend_with_context(sender, recipients_with_frequency, subject, phrase_id, phrase_text)
         print(f"[OK] Enviados {len(recipients)} correos de {len(all_subscribers)} suscriptores con asunto: {subject}")
         return 0
     except Exception as e:
