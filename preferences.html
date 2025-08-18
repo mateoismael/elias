@@ -176,6 +176,18 @@
     </main>
 
     <script>
+      // Mejorar UX - permitir envío con Enter
+      document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email');
+        emailInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            // Encontrar el botón de actualizar y hacer clic
+            document.querySelector('button[type="submit"]').click();
+          }
+        });
+      });
+
       function unsubscribe() {
         const email = document.getElementById('email').value;
         if (!email) {
@@ -184,7 +196,7 @@
         }
         
         if (confirm('¿Estás seguro que quieres cancelar tu suscripción?')) {
-          window.location.href = `mailto:noreply@pseudosapiens.com?subject=UNSUBSCRIBE&body=Por favor cancela mi suscripción para: ${email}`;
+          window.location.href = `mailto:reflexiones@pseudosapiens.com?subject=DESUSCRIBIR&body=Por favor cancela mi suscripción para: ${email}`;
         }
       }
     </script>

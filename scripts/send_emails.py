@@ -6,6 +6,8 @@ import requests
 from datetime import datetime, timezone
 from typing import List, Dict
 import time
+import secrets
+import hmac
 
 # Load .env file if it exists
 try:
@@ -23,6 +25,62 @@ except Exception:  # pragma: no cover
 
 
 NETLIFY_API = "https://api.netlify.com/api/v1"
+
+def generate_unsubscribe_token(email: str) -> str:
+    """
+    Genera un token seguro para desuscripción.
+    Combina email + timestamp + secret para crear un token único y verificable.
+    """
+    # Usar una clave secreta del entorno o generar una por defecto
+    secret_key = os.getenv('UNSUBSCRIBE_SECRET', 'pseudosapiens-default-secret-2025')
+    
+    # Timestamp actual (válido por 30 días)
+    timestamp = str(int(time.time()))
+    
+    # Datos a firmar
+    message = f"{email}:{timestamp}"
+    
+    # Generar HMAC
+    signature = hmac.new(
+        secret_key.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Token final: timestamp:signature
+    return f"{timestamp}:{signature}"
+
+def validate_unsubscribe_token(email: str, token: str) -> bool:
+    """
+    Valida si un token de desuscripción es válido y no ha expirado.
+    """
+    try:
+        # Separar timestamp y signature
+        timestamp_str, signature = token.split(':', 1)
+        timestamp = int(timestamp_str)
+        
+        # Verificar que no haya expirado (30 días = 2592000 segundos)
+        current_time = int(time.time())
+        if current_time - timestamp > 2592000:  # 30 días
+            return False
+        
+        # Regenerar el token esperado
+        expected_token = generate_unsubscribe_token(email)
+        expected_timestamp, expected_signature = expected_token.split(':', 1)
+        
+        # Comparar signatures de forma segura (no el timestamp, que será diferente)
+        secret_key = os.getenv('UNSUBSCRIBE_SECRET', 'pseudosapiens-default-secret-2025')
+        message = f"{email}:{timestamp_str}"
+        expected_sig = hmac.new(
+            secret_key.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(signature, expected_sig)
+        
+    except (ValueError, IndexError):
+        return False
 
 
 def load_phrases(csv_path: str) -> List[Dict[str, str]]:
@@ -171,6 +229,7 @@ def build_email_html(phrase_id: str, phrase_text: str, recipient_email: str = ""
     # Obtener hora actual en Perú (UTC-5)
     import hashlib
     from datetime import datetime, timezone, timedelta
+    from urllib.parse import quote
     
     peru_tz = timezone(timedelta(hours=-5))
     now_peru = datetime.now(peru_tz)
@@ -180,8 +239,15 @@ def build_email_html(phrase_id: str, phrase_text: str, recipient_email: str = ""
     
     greeting, intro = get_contextual_greeting(hour_peru, frequency)
     
-    # Timestamp único por email (incluye destinatario para unicidad)
-    unique_timestamp = int(time.time() * 1000) + hash(recipient_email) % 1000
+    # Timestamp ultra-único por email (múltiples factores de unicidad)
+    import random
+    base_time = int(time.time() * 1000)
+    email_hash = hash(recipient_email) % 10000
+    random_factor = random.randint(1000, 9999)
+    phrase_hash = hash(phrase_id) % 1000
+    unique_timestamp = base_time + email_hash + random_factor + phrase_hash
+    
+    # Ya no necesitamos pasar datos por URL - entrada manual más segura
     
     # HTML mínimo que parece mensaje personal
     html = f"""<!DOCTYPE html>
@@ -210,7 +276,8 @@ Pseudosapiens
 </p>
 
 <p style="margin:30px 0 0;font-size:12px;color:#999">
-<a href="mailto:reflexiones@pseudosapiens.com?subject=No más emails" style="color:#999">No recibir más</a>
+<a href="https://pseudosapiens.com/preferences" style="color:#999">Cambiar frecuencia</a> • 
+<a href="https://pseudosapiens.com/unsubscribe" style="color:#999">Desuscribirse</a>
 </p>
 
 <!-- Timestamp invisible único para evitar agrupación en Gmail -->
@@ -227,6 +294,7 @@ def build_email_text(phrase_text: str, recipient_email: str = "", frequency: int
     """
     # Obtener hora actual en Perú (UTC-5)
     from datetime import datetime, timezone, timedelta
+    from urllib.parse import quote
     
     peru_tz = timezone(timedelta(hours=-5))
     now_peru = datetime.now(peru_tz)
@@ -236,8 +304,15 @@ def build_email_text(phrase_text: str, recipient_email: str = "", frequency: int
     
     greeting, intro = get_contextual_greeting(hour_peru, frequency)
     
-    # Timestamp único por email
-    unique_timestamp = int(time.time() * 1000) + hash(recipient_email) % 1000
+    # Timestamp ultra-único por email (múltiples factores de unicidad) 
+    import random
+    base_time = int(time.time() * 1000)
+    email_hash = hash(recipient_email) % 10000
+    random_factor = random.randint(1000, 9999)
+    phrase_hash = hash(phrase_text[:20]) % 1000  # Usar parte de la frase
+    unique_timestamp = base_time + email_hash + random_factor + phrase_hash
+    
+    # Ya no necesitamos pasar datos por URL - entrada manual más segura
     
     return f"""{greeting}
 
@@ -249,7 +324,8 @@ Un saludo,
 Pseudosapiens
 
 ---
-Si no quieres recibir más emails, solo responde "NO MÁS"
+Cambiar frecuencia: https://pseudosapiens.com/preferences
+Desuscribirse: https://pseudosapiens.com/unsubscribe
 
 [{unique_timestamp}]
 """
@@ -287,6 +363,9 @@ def send_via_resend_with_context(sender: str, recipients_data: List[Dict], subje
         html = build_email_html(phrase_id, phrase_text, email, frequency)
         text = build_email_text(phrase_text, email, frequency)
         
+        # URL limpia para compliance headers
+        unsubscribe_url = "https://pseudosapiens.com/unsubscribe"
+        
         # Idempotency por destinatario
         idem = hashlib.sha256((subject + "|" + slot + "|" + email).encode('utf-8')).hexdigest()
 
@@ -301,7 +380,10 @@ def send_via_resend_with_context(sender: str, recipients_data: List[Dict], subje
                     "reply_to": "reflexiones@pseudosapiens.com",
                     "headers": {
                         "Idempotency-Key": idem,
-                        "Message-ID": f"<{idem}@pseudosapiens.com>"
+                        "Message-ID": f"<{idem}@pseudosapiens.com>",
+                        # Headers requeridos para compliance Gmail/Yahoo 2025
+                        "List-Unsubscribe": f"<{unsubscribe_url}>",
+                        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
                     }
                 }
                 

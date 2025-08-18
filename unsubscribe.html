@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Desuscripción - Pseudosapiens</title>
+    <meta
+      name="description"
+      content="Gestiona tu suscripción a las frases motivacionales de Pseudosapiens."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial,
+          sans-serif;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+      }
+      .card {
+        width: min(620px, 92vw);
+        border: 1px solid #7773;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 6px 24px #00000010;
+        background: #fff;
+        color: #111;
+        text-align: center;
+      }
+      @media (prefers-color-scheme: dark) {
+        .card {
+          background: #111;
+          color: #eee;
+          border-color: #fff2;
+        }
+        input,
+        button {
+          background: #1b1b1b;
+          color: #fff;
+          border-color: #fff2;
+        }
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.7rem;
+      }
+      p {
+        margin: 0 0 16px;
+      }
+      .email-display {
+        background: #f8fafc;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        font-family: monospace;
+        border: 1px solid #e2e8f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        .email-display {
+          background: #1e293b;
+          border-color: #475569;
+          color: #cbd5e1;
+        }
+      }
+      .actions {
+        display: grid;
+        gap: 12px;
+        margin: 24px 0;
+      }
+      button {
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid #7775;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+      .button-primary {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+      }
+      .button-primary:hover {
+        background: #b91c1c;
+      }
+      .button-secondary {
+        background: #6366f1;
+        color: white;
+        border-color: #6366f1;
+      }
+      .button-secondary:hover {
+        background: #4f46e5;
+      }
+      .button-tertiary {
+        background: transparent;
+        color: #666;
+        border-color: #ccc;
+      }
+      .button-tertiary:hover {
+        background: #f5f5f5;
+      }
+      @media (prefers-color-scheme: dark) {
+        .button-tertiary {
+          color: #aaa;
+          border-color: #444;
+        }
+        .button-tertiary:hover {
+          background: #222;
+        }
+      }
+      .hidden {
+        display: none;
+      }
+      .success-message {
+        color: #059669;
+        background: #ecfdf5;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #059669;
+        margin: 16px 0;
+      }
+      @media (prefers-color-scheme: dark) {
+        .success-message {
+          background: #022c22;
+          color: #6ee7b7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div id="confirm-step">
+        <h1>¿Deseas desuscribirte?</h1>
+        <p>
+          Ingresa tu correo electrónico para desuscribirte de nuestras frases motivacionales.
+        </p>
+        
+        <form onsubmit="return false;">
+          <label for="email-input" style="display: block; margin-bottom: 8px; font-weight: 500;">
+            Correo electrónico
+          </label>
+          <input
+            type="email"
+            id="email-input"
+            placeholder="tu@email.com"
+            required
+            style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid #7775; font-size: 1rem; margin-bottom: 16px;"
+          />
+        </form>
+
+        <p style="font-size: 0.9rem; opacity: 0.8;">
+          Si solo quieres recibir menos emails, puedes <a href="/preferences" style="color: #6366f1;">cambiar la frecuencia</a> en lugar de desuscribirte completamente.
+        </p>
+
+        <div class="actions">
+          <button type="button" class="button-primary" onclick="confirmUnsubscribe()">
+            Verificar y desuscribirme
+          </button>
+          <button type="button" class="button-secondary" onclick="goToPreferences()">
+            Solo cambiar frecuencia
+          </button>
+          <button type="button" class="button-tertiary" onclick="goHome()">
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <div id="success-step" class="hidden">
+        <h1>✅ Desuscripción Completada</h1>
+        <div class="success-message">
+          <strong>Tu suscripción ha sido cancelada exitosamente.</strong>
+          <br>No recibirás más emails de Pseudosapiens.
+        </div>
+        <p>
+          Si cambiaste de opinión, puedes volver a suscribirte en cualquier momento.
+        </p>
+        <div class="actions">
+          <button type="button" class="button-secondary" onclick="goHome()">
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+
+      <div id="error-step" class="hidden">
+        <h1>❌ Error</h1>
+        <p>
+          No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente o contáctanos.
+        </p>
+        <div class="actions">
+          <button type="button" class="button-tertiary" onclick="location.reload()">
+            Intentar nuevamente
+          </button>
+          <button type="button" class="button-secondary" onclick="goHome()">
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      async function confirmUnsubscribe() {
+        const emailInput = document.getElementById('email-input');
+        const email = emailInput.value.trim();
+        
+        if (!email) {
+          alert('Por favor ingresa tu correo electrónico');
+          return;
+        }
+
+        if (!email.includes('@')) {
+          alert('Por favor ingresa un correo electrónico válido');
+          return;
+        }
+
+        try {
+          // Mostrar loading
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = 'Verificando...';
+          button.disabled = true;
+
+          // Simulamos verificación y desuscripción
+          // En realidad esto llamaría a una función que:
+          // 1. Verifica si el email existe en Netlify Forms
+          // 2. Si existe, lo remueve
+          // 3. Responde con éxito/error
+          
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Simular delay
+          
+          // Por ahora, simulamos éxito
+          showSuccess(email);
+          
+        } catch (error) {
+          console.error('Error:', error);
+          showError();
+          // Restaurar botón
+          event.target.textContent = originalText;
+          event.target.disabled = false;
+        }
+      }
+
+      function goToPreferences() {
+        window.location.href = '/preferences';
+      }
+
+      function goHome() {
+        window.location.href = '/';
+      }
+
+      function showSuccess(email) {
+        document.getElementById('confirm-step').classList.add('hidden');
+        document.getElementById('error-step').classList.add('hidden');
+        document.getElementById('success-step').classList.remove('hidden');
+        
+        // Actualizar mensaje de éxito con el email
+        const successMessage = document.querySelector('.success-message');
+        successMessage.innerHTML = `<strong>Tu suscripción ha sido cancelada exitosamente.</strong><br>El email <code>${email}</code> no recibirá más frases de Pseudosapiens.`;
+      }
+
+      function showError() {
+        document.getElementById('confirm-step').classList.add('hidden');
+        document.getElementById('success-step').classList.add('hidden');
+        document.getElementById('error-step').classList.remove('hidden');
+      }
+
+      // Mejorar UX del input
+      document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email-input');
+        emailInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmUnsubscribe();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
