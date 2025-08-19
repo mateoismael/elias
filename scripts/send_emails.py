@@ -688,8 +688,11 @@ def main_modernized(argv: List[str]) -> int:
         return 0
 
     try:
-        # Load configurations
-        email_config = EmailConfig.from_env()
+        # Load configurations - only load email config if not dry-run
+        if not dry_run:
+            email_config = EmailConfig.from_env()
+        else:
+            email_config = None
         netlify_config = NetlifyConfig.from_env()
         
         # Load and select phrase
@@ -778,8 +781,11 @@ def main_modernized(argv: List[str]) -> int:
         logger.info("Email content generated", 
                    emails_to_send=len(email_contents))
 
-        # Send emails
-        success_count, error_count = send_email_batch(email_config, email_contents)
+        # Send emails (only if not dry-run)
+        if email_config:
+            success_count, error_count = send_email_batch(email_config, email_contents)
+        else:
+            success_count, error_count = 0, 0
 
         if error_count == 0:
             logger.info("All emails sent successfully", 

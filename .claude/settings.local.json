@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh workflow:*)",
+      "Bash(gh run list:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
