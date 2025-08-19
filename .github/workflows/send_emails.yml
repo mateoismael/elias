@@ -28,6 +28,8 @@ jobs:
       - name: Dry-run (log phrase and subscribers count)
         env:
           PHRASES_CSV: frases_pilot.csv
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           NETLIFY_FORM_NAME: subscribe
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
