@@ -241,10 +241,11 @@ def build_email_html(phrase_id: str, phrase_text: str, recipient_email: str = ""
     
     # Timestamp ultra-único por email (múltiples factores de unicidad)
     import random
-    base_time = int(time.time() * 1000)
-    email_hash = hash(recipient_email) % 10000
-    random_factor = random.randint(1000, 9999)
-    phrase_hash = hash(phrase_id) % 1000
+    import time
+    base_time = int(time.time() * 1000000)  # Microsegundos para mayor precisión
+    email_hash = hash(recipient_email) % 100000
+    random_factor = random.randint(100000, 999999)  # Factor aleatorio grande
+    phrase_hash = hash(phrase_id) % 10000
     unique_timestamp = base_time + email_hash + random_factor + phrase_hash
     
     # Ya no necesitamos pasar datos por URL - entrada manual más segura
@@ -306,11 +307,12 @@ def build_email_text(phrase_text: str, recipient_email: str = "", frequency: int
     
     # Timestamp ultra-único por email (múltiples factores de unicidad) 
     import random
-    base_time = int(time.time() * 1000)
-    email_hash = hash(recipient_email) % 10000
-    random_factor = random.randint(1000, 9999)
-    phrase_hash = hash(phrase_text[:20]) % 1000  # Usar parte de la frase
-    unique_timestamp = base_time + email_hash + random_factor + phrase_hash
+    import secrets
+    base_time = int(time.time() * 1000000)  # Microsegundos para mayor precisión
+    email_hash = hash(recipient_email) % 100000
+    secure_random = secrets.randbelow(999999)  # Cryptographically secure random
+    phrase_hash = hash(phrase_text[:20]) % 10000  # Usar parte de la frase
+    unique_timestamp = base_time + email_hash + secure_random + phrase_hash
     
     # Ya no necesitamos pasar datos por URL - entrada manual más segura
     
@@ -327,7 +329,6 @@ Pseudosapiens
 Cambiar frecuencia: https://pseudosapiens.com/preferences
 Desuscribirse: https://pseudosapiens.com/unsubscribe
 
-[{unique_timestamp}]
 """
 
 
@@ -381,9 +382,9 @@ def send_via_resend_with_context(sender: str, recipients_data: List[Dict], subje
                     "headers": {
                         "Idempotency-Key": idem,
                         "Message-ID": f"<{idem}@pseudosapiens.com>",
-                        # Headers requeridos para compliance Gmail/Yahoo 2025
-                        "List-Unsubscribe": f"<{unsubscribe_url}>",
-                        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+                        # Headers básicos - sin List-Unsubscribe por ahora
+                        # "List-Unsubscribe": f"<{unsubscribe_url}>",
+                        # "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
                     }
                 }
                 
