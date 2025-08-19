@@ -30,9 +30,9 @@ jobs:
           PHRASES_CSV: frases_pilot.csv
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          NETLIFY_FORM_NAME: subscribe
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TEST_MODE: false
         run: |
           python scripts/send_emails.py --dry-run
 
@@ -42,8 +42,8 @@ jobs:
           PHRASES_CSV: frases_pilot.csv
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          NETLIFY_FORM_NAME: subscribe
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TEST_MODE: false
         run: |
           python scripts/send_emails.py

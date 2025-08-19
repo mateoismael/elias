@@ -14,6 +14,13 @@ import logging
 import structlog
 from pathlib import Path
 
+# Import Supabase database module
+try:
+    from database import get_db
+except ImportError:
+    get_db = None
+    print("[WARN] Database module not found. Supabase integration disabled.")
+
 try:
     from pydantic import BaseModel, EmailStr, field_validator, Field
 except ImportError:
@@ -418,6 +425,62 @@ def get_subscribers_from_netlify(netlify_config: NetlifyConfig) -> List[Subscrib
         return []
 
 
+def get_subscribers_from_supabase() -> List[Subscriber]:
+    """Get active subscribers from Supabase database."""
+    if get_db is None:
+        logger.error("Supabase database module not available")
+        return []
+    
+    try:
+        db = get_db()
+        
+        # Get all active subscribers with their plan details
+        subscribers_data = db.get_all_active_subscribers()
+        
+        subscribers = []
+        invalid_count = 0
+        
+        for sub_data in subscribers_data:
+            try:
+                # Map frequency hours to FrequencyEnum
+                frequency_hours = sub_data['frequency_hours']
+                if frequency_hours == 1:
+                    frequency = FrequencyEnum.HOURLY
+                elif frequency_hours == 3:
+                    frequency = FrequencyEnum.EVERY_3_HOURS
+                elif frequency_hours == 6:
+                    frequency = FrequencyEnum.EVERY_6_HOURS
+                elif frequency_hours == 24:
+                    frequency = FrequencyEnum.DAILY
+                else:
+                    logger.warning("Unknown frequency", email=sub_data['email'], frequency_hours=frequency_hours)
+                    frequency = FrequencyEnum.DAILY  # Default to daily
+                
+                subscriber = Subscriber(
+                    email=sub_data['email'],
+                    frequency=frequency
+                )
+                subscribers.append(subscriber)
+                
+            except Exception as e:
+                logger.warning("Invalid subscriber data from Supabase", 
+                              email=sub_data.get('email', 'unknown'), 
+                              error=str(e))
+                invalid_count += 1
+                continue
+        
+        logger.info("Subscribers loaded from Supabase", 
+                   valid_count=len(subscribers), 
+                   invalid_count=invalid_count,
+                   source="supabase")
+        
+        return subscribers
+        
+    except Exception as e:
+        logger.error("Failed to get subscribers from Supabase", error=str(e))
+        return []
+
+
 def get_contextual_greeting(hour_peru: int, frequency: FrequencyEnum) -> Tuple[str, str]:
     """
     Retorna (saludo, introducción) contextual según hora y frecuencia.
@@ -710,7 +773,7 @@ def main_modernized(argv: List[str]) -> int:
                    phrase_id=selected_phrase.id, 
                    phrase_preview=selected_phrase.text[:50] + "..." if len(selected_phrase.text) > 50 else selected_phrase.text)
 
-        # Get subscribers
+        # Get subscribers from Supabase
         all_subscribers: List[Subscriber] = []
         
         if test_mode:
@@ -730,10 +793,9 @@ def main_modernized(argv: List[str]) -> int:
                 logger.error("No test emails found - add TEST_EMAILS=your-email@gmail.com in .env")
                 return 1
                 
-        elif netlify_config.site_id and netlify_config.access_token:
-            all_subscribers = get_subscribers_from_netlify(netlify_config)
         else:
-            logger.warning("No Netlify configuration found - no subscribers loaded")
+            # Production mode: get subscribers from Supabase
+            all_subscribers = get_subscribers_from_supabase()
 
         # Filter subscribers based on their frequency preference and optimal hours
         active_subscribers = []
