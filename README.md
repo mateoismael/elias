@@ -45,12 +45,97 @@ Servicio de frases motivacionales por email cada hora (frase aleatoria) usando N
    - Haz una suscripción desde `index.html` desplegado (ingresa un email tuyo).
    - Ejecuta manualmente el workflow en GitHub (tab Actions > Send Motivational Phrases > Run workflow) o espera al cron.
 
-## Desarrollo local (dry-run)
+## Mejoras Python 2025 🚀
 
-1. Crea un entorno Python 3.11 y instala dependencias:
-   - `pip install -r requirements.txt`
-2. Ejecuta dry-run (no envía emails):
-   - `PHRASES_CSV=frases_pilot.csv python scripts/send_emails.py --dry-run`
+### Nuevas Características Implementadas
+- **Logging Estructurado JSON**: Logs en formato JSON con contexto enriquecido para monitoreo profesional
+- **Validación de Datos con Pydantic**: Modelos type-safe para emails, frecuencias y contenido
+- **Sistema de Fallback Automático**: Función principal modernizada con fallback robusto a versión legacy
+- **Horarios Psicológicamente Optimizados**: Envíos en horarios de mayor impacto emocional (Peru timezone)
+- **Seguridad Mejorada**: Tokens HMAC para desuscripción segura y timestamps únicos anti-agrupación
+- **Manejo de Errores Específico**: Tratamiento diferenciado por tipo de error (red, rate limiting, etc.)
+
+### Nuevas Dependencias
+- `structlog>=25.0.0`: Logging estructurado JSON
+- `pydantic[email]>=2.0.0`: Validación de datos y emails
+- `python-dotenv>=1.0.0`: Carga automática de archivos .env
+
+### Variables de Entorno Avanzadas (Opcionales)
+- `RESEND_THROTTLE_SECONDS`: Segundos entre emails (default: 0.6)
+- `RESEND_MAX_RETRIES`: Reintentos máximos en rate limiting (default: 8)
+- `UNSUBSCRIBE_SECRET`: Clave secreta para tokens de desuscripción HMAC
+
+## Desarrollo Local (Modernizado)
+
+1. **Instalación completa:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Variables de entorno (.env):**
+   ```bash
+   # Copia .env desde el ejemplo y configura:
+   RESEND_API_KEY=tu_api_key
+   SENDER_EMAIL="Tu Nombre <tu@dominio.com>"
+   TEST_MODE=true
+   TEST_EMAILS=tu-email@gmail.com
+   ```
+
+3. **Testing y validación:**
+   ```bash
+   # Dry-run con logging estructurado JSON
+   python scripts/send_emails.py --dry-run
+   
+   # Test mode con envío real
+   python scripts/send_emails.py --test
+   
+   # Validación de datos automática
+   python scripts/send_emails.py --dry-run  # Detecta emails inválidos
+   ```
+
+## Logging y Monitoreo
+
+El sistema usa **logging estructurado JSON** para facilitar el monitoreo:
+- Logs en formato JSON con timestamps ISO 8601
+- Contexto enriquecido por operación (recipient, phrase_id, status_code)
+- Niveles apropiados: INFO (operaciones), WARNING (validación), ERROR (fallos)
+- Compatible con Elasticsearch, Splunk, y sistemas de agregación
+
+**Ejemplo de log:**
+```json
+{
+  "event": "Email sent successfully",
+  "recipient": "user@example.com",
+  "subject": "Buenos días",
+  "phrase_id": "P131",
+  "timestamp": "2025-08-19T15:46:55.382111Z",
+  "level": "info"
+}
+```
+
+## Troubleshooting
+
+### Problemas Comunes
+- **"Pydantic not installed"**: Ejecuta `pip install pydantic[email]`
+- **"structlog not found"**: Ejecuta `pip install structlog>=25.0.0`
+- **Rate limiting (429 errors)**: Ajusta `RESEND_THROTTLE_SECONDS=1.0` en .env
+- **Emails inválidos**: El sistema los detecta automáticamente y continúa con válidos
+
+### Validación de Configuración
+El script valida automáticamente:
+- ✅ Formato de emails con Pydantic EmailStr
+- ✅ Frecuencias válidas (1, 3, 6, 24 horas únicamente)
+- ✅ Variables de entorno requeridas (API keys, configuración)
+- ✅ Conexión a servicios externos (Netlify, Resend)
+
+### Modo Debug Avanzado
+```bash
+# Ver todos los logs detallados
+python scripts/send_emails.py --dry-run
+
+# Forzar test de fallback (solo desarrollo)
+python scripts/send_emails.py --test-fallback --dry-run
+```
 
 ## Notas
 

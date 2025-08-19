@@ -4,27 +4,179 @@ import os
 import sys
 import requests
 from datetime import datetime, timezone
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple, Literal
+from dataclasses import dataclass, field
+from enum import IntEnum
 import time
 import secrets
 import hmac
+import logging
+import structlog
+from pathlib import Path
+
+try:
+    from pydantic import BaseModel, EmailStr, field_validator, Field
+except ImportError:
+    print("[WARN] Pydantic not installed. Install with: pip install pydantic[email]")
+    BaseModel = object
+    EmailStr = str
+    field_validator = lambda x: lambda y: y
+    Field = lambda **kwargs: None
+
+# Configure structured logging
+logging.basicConfig(
+    format="%(message)s",
+    stream=sys.stdout,
+    level=logging.INFO,
+)
+
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.processors.JSONRenderer()
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger()
 
 # Load .env file if it exists
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    pass  # dotenv is optional
+    logger.warning("dotenv not installed - environment variables from shell only")
 
 
 # Optional import: if resend is not installed, allow dry-run
 try:
     import resend  # type: ignore
-except Exception:  # pragma: no cover
+except ImportError as e:
+    logger.warning("Resend not installed - dry-run only", error=str(e))
     resend = None  # type: ignore
 
 
 NETLIFY_API = "https://api.netlify.com/api/v1"
+
+
+# =============================================================================
+# CONFIGURATION MODELS (Dataclasses & Pydantic)
+# =============================================================================
+
+class FrequencyEnum(IntEnum):
+    """Valid email frequencies in hours."""
+    HOURLY = 1
+    EVERY_3_HOURS = 3
+    EVERY_6_HOURS = 6
+    DAILY = 24
+
+
+@dataclass(frozen=True)
+class EmailConfig:
+    """Email service configuration."""
+    api_key: str
+    sender_email: str
+    throttle_seconds: float = 0.6
+    max_retries: int = 8
+    
+    @classmethod
+    def from_env(cls) -> 'EmailConfig':
+        """Create configuration from environment variables."""
+        api_key = os.getenv('RESEND_API_KEY')
+        if not api_key:
+            raise ValueError("RESEND_API_KEY environment variable is required")
+            
+        sender = os.getenv('SENDER_EMAIL', 'Frases <no-reply@example.com>')
+        throttle = float(os.getenv('RESEND_THROTTLE_SECONDS', '0.6'))
+        retries = int(os.getenv('RESEND_MAX_RETRIES', '8'))
+        
+        return cls(
+            api_key=api_key,
+            sender_email=sender,
+            throttle_seconds=throttle,
+            max_retries=retries
+        )
+
+
+@dataclass(frozen=True)
+class NetlifyConfig:
+    """Netlify Forms configuration."""
+    site_id: str
+    access_token: str
+    form_name: str = 'subscribe'
+    
+    @classmethod
+    def from_env(cls) -> 'NetlifyConfig':
+        """Create configuration from environment variables."""
+        site_id = os.getenv('NETLIFY_SITE_ID', '')
+        token = os.getenv('NETLIFY_ACCESS_TOKEN', '')
+        form_name = os.getenv('NETLIFY_FORM_NAME', 'subscribe')
+        
+        return cls(
+            site_id=site_id,
+            access_token=token,
+            form_name=form_name
+        )
+
+
+class Subscriber(BaseModel):
+    """Validated subscriber model."""
+    email: EmailStr
+    frequency: FrequencyEnum = Field(default=FrequencyEnum.HOURLY, description="Email frequency in hours")
+    
+    @field_validator('frequency', mode='before')
+    @classmethod
+    def validate_frequency(cls, v):
+        """Convert and validate frequency values."""
+        if isinstance(v, str):
+            try:
+                v = int(v)
+            except ValueError:
+                raise ValueError(f"Invalid frequency: {v}")
+        
+        if v not in [1, 3, 6, 24]:
+            raise ValueError(f"Frequency must be 1, 3, 6, or 24, got: {v}")
+        
+        return FrequencyEnum(v)
+
+
+class Phrase(BaseModel):
+    """Validated phrase model."""
+    id: str
+    text: str = Field(min_length=1, description="Phrase content")
+    
+    @field_validator('text')
+    @classmethod
+    def validate_text_not_empty(cls, v):
+        """Ensure phrase text is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Phrase text cannot be empty or just whitespace")
+        return v.strip()
+
+
+class EmailContent(BaseModel):
+    """Email content with context."""
+    recipient: Subscriber
+    phrase: Phrase
+    subject: str
+    html: str
+    text: str
+    unique_timestamp: int
+
+
+# =============================================================================
+# CORE BUSINESS LOGIC
+# =============================================================================
 
 def generate_unsubscribe_token(email: str) -> str:
     """
@@ -83,13 +235,43 @@ def validate_unsubscribe_token(email: str, token: str) -> bool:
         return False
 
 
-def load_phrases(csv_path: str) -> List[Dict[str, str]]:
-    with open(csv_path, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        phrases = [row for row in reader if row.get('text')]
-    if not phrases:
-        raise RuntimeError("No se encontraron frases en el CSV.")
-    return phrases
+def load_phrases(csv_path: str) -> List[Phrase]:
+    """Load and validate phrases from CSV file."""
+    try:
+        with open(csv_path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            phrases = []
+            for i, row in enumerate(reader, 1):
+                if row.get('text'):
+                    try:
+                        phrase = Phrase(
+                            id=row.get('id', f'P{i}'),
+                            text=row['text']
+                        )
+                        phrases.append(phrase)
+                    except Exception as e:
+                        logger.warning("Invalid phrase in CSV", row=i, error=str(e))
+                        continue
+        
+        if not phrases:
+            raise ValueError("No valid phrases found in CSV file")
+        
+        logger.info("Phrases loaded successfully", count=len(phrases), file=csv_path)
+        return phrases
+        
+    except FileNotFoundError:
+        logger.error("Phrases CSV file not found", file=csv_path)
+        raise
+    except Exception as e:
+        logger.error("Failed to load phrases", file=csv_path, error=str(e))
+        raise
+
+
+def load_phrases_legacy(csv_path: str) -> List[Dict[str, str]]:
+    """Load phrases for legacy compatibility - returns dict format."""
+    phrases = load_phrases(csv_path)
+    # Convert Phrase objects back to dict format for legacy compatibility
+    return [{'id': p.id, 'text': p.text} for p in phrases]
 
 
 def current_hour_slot() -> int:
@@ -136,79 +318,129 @@ def is_sending_hours() -> bool:
     return hour >= 10 or hour <= 4
 
 
-def get_forms(site_id: str, token: str) -> List[Dict]:
-    r = requests.get(
-        f"{NETLIFY_API}/sites/{site_id}/forms",
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+def get_forms(site_id: str, token: str) -> List[Dict[str, any]]:
+    """Fetch forms from Netlify with proper error handling."""
+    try:
+        response = requests.get(
+            f"{NETLIFY_API}/sites/{site_id}/forms",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.Timeout:
+        logger.error("Netlify API timeout getting forms", site_id=site_id)
+        raise
+    except requests.exceptions.HTTPError as e:
+        logger.error("Netlify API HTTP error getting forms", 
+                    site_id=site_id, status_code=e.response.status_code)
+        raise
+    except requests.exceptions.ConnectionError:
+        logger.error("Netlify API connection error getting forms", site_id=site_id)
+        raise
 
 
-def get_submissions(form_id: str, token: str) -> List[Dict]:
-    r = requests.get(
-        f"{NETLIFY_API}/forms/{form_id}/submissions",
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
+def get_submissions(form_id: str, token: str) -> List[Dict[str, any]]:
+    """Fetch form submissions from Netlify with proper error handling."""
+    try:
+        response = requests.get(
+            f"{NETLIFY_API}/forms/{form_id}/submissions",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.Timeout:
+        logger.error("Netlify API timeout getting submissions", form_id=form_id)
+        raise
+    except requests.exceptions.HTTPError as e:
+        logger.error("Netlify API HTTP error getting submissions", 
+                    form_id=form_id, status_code=e.response.status_code)
+        raise
+    except requests.exceptions.ConnectionError:
+        logger.error("Netlify API connection error getting submissions", form_id=form_id)
+        raise
 
 
-def get_subscribers_from_netlify(form_name: str, site_id: str, token: str) -> List[Dict[str, str]]:
+def get_subscribers_from_netlify(netlify_config: NetlifyConfig) -> List[Subscriber]:
     """Get subscribers with their preferences from Netlify Forms."""
-    forms = get_forms(site_id, token)
-    form = next((f for f in forms if f.get('name') == form_name), None)
-    if not form:
-        return []
-    subs = get_submissions(form.get('id'), token)
-    
-    # Track latest preference for each email
-    email_prefs = {}
-    for s in subs:
-        data = s.get('data') or {}
-        email = data.get('email') or data.get('Email') or data.get('correo')
-        frequency = data.get('frequency', '1')  # default to every hour
+    try:
+        forms = get_forms(netlify_config.site_id, netlify_config.access_token)
+        form = next((f for f in forms if f.get('name') == netlify_config.form_name), None)
+        if not form:
+            logger.warning("Form not found", form_name=netlify_config.form_name)
+            return []
         
-        if email:
-            email = str(email).strip()
-            # Keep the latest submission for each email
-            submission_time = s.get('created_at', '')
-            if email not in email_prefs or submission_time > email_prefs[email]['time']:
-                email_prefs[email] = {
-                    'frequency': int(frequency),
-                    'time': submission_time
-                }
-    
-    # Return list of email + frequency pairs
-    return [{'email': email, 'frequency': prefs['frequency']} 
-            for email, prefs in email_prefs.items()]
+        submissions = get_submissions(form.get('id'), netlify_config.access_token)
+        
+        # Track latest preference for each email
+        email_prefs = {}
+        invalid_emails = 0
+        
+        for submission in submissions:
+            data = submission.get('data') or {}
+            email = data.get('email') or data.get('Email') or data.get('correo')
+            frequency = data.get('frequency', '1')  # default to every hour
+            
+            if email:
+                email = str(email).strip()
+                # Keep the latest submission for each email
+                submission_time = submission.get('created_at', '')
+                if email not in email_prefs or submission_time > email_prefs[email]['time']:
+                    email_prefs[email] = {
+                        'frequency': int(frequency),
+                        'time': submission_time
+                    }
+        
+        # Convert to validated Subscriber objects
+        subscribers = []
+        for email, prefs in email_prefs.items():
+            try:
+                subscriber = Subscriber(
+                    email=email,
+                    frequency=prefs['frequency']
+                )
+                subscribers.append(subscriber)
+            except Exception as e:
+                logger.warning("Invalid subscriber data", email=email, error=str(e))
+                invalid_emails += 1
+                continue
+        
+        logger.info("Subscribers loaded from Netlify", 
+                   valid_count=len(subscribers), 
+                   invalid_count=invalid_emails,
+                   form_name=netlify_config.form_name)
+        
+        return subscribers
+        
+    except Exception as e:
+        logger.error("Failed to get subscribers from Netlify", error=str(e))
+        return []
 
 
-def get_contextual_greeting(hour_peru: int, frequency: int) -> tuple[str, str]:
+def get_contextual_greeting(hour_peru: int, frequency: FrequencyEnum) -> Tuple[str, str]:
     """
     Retorna (saludo, introducción) contextual según hora y frecuencia.
     hour_peru: hora en Perú (0-23)
-    frequency: frecuencia del usuario (1, 3, 6, 24)
+    frequency: frecuencia del usuario
     """
     
     # Saludos por momento del día
     if 5 <= hour_peru < 12:  # Mañana
         greetings = ["¡Buenos días!", "Arrancando el día", "Para empezar bien"]
-        if frequency == 24:  # Diario - más personal
+        if frequency == FrequencyEnum.DAILY:  # Diario - más personal
             intros = ["Que tengas un día increíble.", "Espero que sea un gran día para ti.", "Comenzamos con energía."]
         else:  # Frecuente - más breve
             intros = ["Un impulso matutino:", "Para arrancar:", "Energía para la mañana:"]
     elif 12 <= hour_peru < 18:  # Tarde
         greetings = ["Mitad del día", "Un momento para reflexionar", "Pausa para inspirarte"]
-        if frequency == 24:
+        if frequency == FrequencyEnum.DAILY:
             intros = ["Espero que el día vaya bien.", "Un momento de reflexión:", "Para acompañar tu tarde:"]
         else:
             intros = ["Para la tarde:", "Mantén el impulso:", "Continuamos:"]
     else:  # Noche (18-23)
         greetings = ["Cerrando el día", "Para la tarde", "Reflexión nocturna"]
-        if frequency == 24:
+        if frequency == FrequencyEnum.DAILY:
             intros = ["Para cerrar el día con buena energía.", "Espero que haya sido un buen día.", "Al final del día:"]
         else:
             intros = ["Para la noche:", "Cerrando bien:", "Última reflexión:"]
@@ -218,6 +450,351 @@ def get_contextual_greeting(hour_peru: int, frequency: int) -> tuple[str, str]:
     intro_idx = (hour_peru + 1) % len(intros)
     
     return greetings[greeting_idx], intros[intro_idx]
+
+
+def generate_unique_timestamp(recipient_email: str, phrase_id: str) -> int:
+    """Generate ultra-unique timestamp to prevent email grouping."""
+    base_time = int(time.time() * 1000000)  # Microsegundos para mayor precisión
+    email_hash = hash(recipient_email) % 100000
+    random_factor = secrets.randbelow(999999)  # Cryptographically secure random
+    phrase_hash = hash(phrase_id) % 10000
+    return base_time + email_hash + random_factor + phrase_hash
+
+
+def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
+    """Build complete email content for a subscriber."""
+    # Obtener hora actual en Perú (UTC-5)
+    from datetime import timedelta
+    peru_tz = timezone(timedelta(hours=-5))
+    now_peru = datetime.now(peru_tz)
+    hour_peru = now_peru.hour
+    
+    greeting, intro = get_contextual_greeting(hour_peru, subscriber.frequency)
+    unique_timestamp = generate_unique_timestamp(subscriber.email, phrase.id)
+    
+    # Generate subject
+    subjects = [
+        "Hola",
+        "Buenos días",
+        "Espero estés bien", 
+        "Algo que me hizo pensar",
+        "Quería compartir esto contigo"
+    ]
+    subject_index = hash(phrase.id) % len(subjects)
+    subject = subjects[subject_index]
+    
+    # Build HTML content
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:20px;font-family:system-ui,sans-serif;line-height:1.5;color:#333">
+
+<p style="margin:0 0 20px;font-size:16px">
+{greeting}
+</p>
+
+<p style="margin:20px 0;font-size:16px;color:#555">
+{intro}
+</p>
+
+<p style="margin:20px 0;font-size:17px;font-style:italic;color:#444;padding:15px;background:#f8f9fa;border-left:3px solid #ddd">
+{phrase.text}
+</p>
+
+<p style="margin:20px 0 5px;font-size:14px;color:#666">
+Un saludo,<br>
+Pseudosapiens
+</p>
+
+<p style="margin:30px 0 0;font-size:12px;color:#999">
+<a href="https://pseudosapiens.com/preferences" style="color:#999">Cambiar frecuencia</a> • 
+<a href="https://pseudosapiens.com/unsubscribe" style="color:#999">Desuscribirse</a>
+</p>
+
+<!-- Timestamp invisible único para evitar agrupación en Gmail -->
+<div style="display:none;font-size:1px;color:transparent">{unique_timestamp}</div>
+
+</body>
+</html>"""
+
+    # Build text content
+    text = f"""{greeting}
+
+{intro}
+
+{phrase.text}
+
+Un saludo,
+Pseudosapiens
+
+---
+Cambiar frecuencia: https://pseudosapiens.com/preferences
+Desuscribirse: https://pseudosapiens.com/unsubscribe
+"""
+
+    return EmailContent(
+        recipient=subscriber,
+        phrase=phrase,
+        subject=subject,
+        html=html,
+        text=text,
+        unique_timestamp=unique_timestamp
+    )
+
+
+# =============================================================================
+# EMAIL SENDING FUNCTIONS (Modernized)
+# =============================================================================
+
+class EmailSendError(Exception):
+    """Custom exception for email sending errors."""
+    def __init__(self, message: str, email: str = "", status_code: Optional[int] = None):
+        super().__init__(message)
+        self.email = email
+        self.status_code = status_code
+
+
+def send_single_email(config: EmailConfig, content: EmailContent) -> None:
+    """Send a single email with proper error handling and retries."""
+    if resend is None:
+        raise EmailSendError("Resend package not installed", content.recipient.email)
+    
+    resend.api_key = config.api_key
+    slot = str(current_hour_slot())
+    
+    # Create idempotency key
+    idem = hashlib.sha256(
+        (content.subject + "|" + slot + "|" + content.recipient.email).encode('utf-8')
+    ).hexdigest()
+    
+    email_data = {
+        "from": config.sender_email,
+        "to": [content.recipient.email],
+        "subject": content.subject,
+        "html": content.html,
+        "text": content.text,
+        "reply_to": "reflexiones@pseudosapiens.com",
+        "headers": {
+            "Idempotency-Key": idem,
+            "Message-ID": f"<{idem}@pseudosapiens.com>",
+            # Headers básicos - sin List-Unsubscribe por ahora
+            # "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe>",
+            # "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+        }
+    }
+    
+    attempts = 0
+    while attempts <= config.max_retries:
+        try:
+            resend.Emails.send(email_data)
+            logger.info("Email sent successfully", 
+                       recipient=content.recipient.email,
+                       subject=content.subject,
+                       phrase_id=content.phrase.id)
+            # Respect rate limits
+            time.sleep(config.throttle_seconds)
+            return
+            
+        except Exception as e:
+            # Handle rate limiting (429)
+            status_code = getattr(getattr(e, 'response', None), 'status_code', None)
+            if status_code == 429:
+                attempts += 1
+                if attempts > config.max_retries:
+                    raise EmailSendError(
+                        f"Max retries exceeded due to rate limiting",
+                        content.recipient.email,
+                        429
+                    )
+                
+                # Get retry-after header
+                response = getattr(e, 'response', None)
+                retry_after = None
+                if response and hasattr(response, 'headers'):
+                    retry_after = response.headers.get('Retry-After') or response.headers.get('retry-after')
+                    if retry_after:
+                        try:
+                            retry_after = int(retry_after)
+                        except ValueError:
+                            retry_after = None
+                
+                sleep_time = retry_after if retry_after else 1.5
+                logger.warning("Rate limited, retrying", 
+                              recipient=content.recipient.email,
+                              attempt=attempts,
+                              sleep_time=sleep_time)
+                time.sleep(sleep_time)
+                continue
+            
+            # Other errors
+            logger.error("Email send failed", 
+                        recipient=content.recipient.email,
+                        error=str(e),
+                        status_code=status_code)
+            raise EmailSendError(f"Email send failed: {str(e)}", content.recipient.email, status_code)
+
+
+def send_email_batch(config: EmailConfig, contents: List[EmailContent]) -> Tuple[int, int]:
+    """Send multiple emails with error handling. Returns (success_count, error_count)."""
+    success_count = 0
+    error_count = 0
+    
+    logger.info("Starting email batch", total_emails=len(contents))
+    
+    for content in contents:
+        try:
+            send_single_email(config, content)
+            success_count += 1
+        except EmailSendError as e:
+            logger.error("Failed to send email", 
+                        recipient=e.email,
+                        error=str(e),
+                        status_code=e.status_code)
+            error_count += 1
+        except Exception as e:
+            logger.error("Unexpected error sending email",
+                        recipient=content.recipient.email,
+                        error=str(e))
+            error_count += 1
+    
+    logger.info("Email batch completed", 
+               success_count=success_count,
+               error_count=error_count,
+               total=len(contents))
+    
+    return success_count, error_count
+
+
+# =============================================================================
+# MAIN FUNCTION (Modernized)
+# =============================================================================
+
+def main_modernized(argv: List[str]) -> int:
+    """Modernized main function with proper error handling and type safety."""
+    dry_run = "--dry-run" in argv
+    test_mode = "--test" in argv or os.getenv('TEST_MODE', 'false').lower() == 'true'
+
+    logger.info("Starting email automation", 
+                dry_run=dry_run, 
+                test_mode=test_mode)
+
+    # Check if we're in sending hours (5:00 AM - 11:59 PM Peru time)
+    if not dry_run and not is_sending_hours():
+        logger.info("Outside sending hours - no emails will be sent",
+                   sending_hours="5:00 AM - 11:59 PM Peru time")
+        return 0
+
+    try:
+        # Load configurations
+        email_config = EmailConfig.from_env()
+        netlify_config = NetlifyConfig.from_env()
+        
+        # Load and select phrase
+        csv_path = os.getenv('PHRASES_CSV', 'frases_pilot.csv')
+        phrases = load_phrases(csv_path)
+        
+        # Choose pseudo-random phrase per hour (deterministic within the hour)
+        slot = current_hour_slot()
+        seed_bytes = hashlib.sha256(f"{slot}:{len(phrases)}".encode('utf-8')).digest()
+        seed_int = int.from_bytes(seed_bytes[:8], 'big')
+        idx = seed_int % len(phrases)
+        selected_phrase = phrases[idx]
+        
+        logger.info("Phrase selected", 
+                   phrase_id=selected_phrase.id, 
+                   phrase_preview=selected_phrase.text[:50] + "..." if len(selected_phrase.text) > 50 else selected_phrase.text)
+
+        # Get subscribers
+        all_subscribers: List[Subscriber] = []
+        
+        if test_mode:
+            # Test mode: use only test emails
+            test_emails = os.getenv('TEST_EMAILS', '').split(',')
+            test_emails = [email.strip() for email in test_emails if email.strip()]
+            if test_emails:
+                for email in test_emails:
+                    try:
+                        subscriber = Subscriber(email=email, frequency=FrequencyEnum.HOURLY)
+                        all_subscribers.append(subscriber)
+                    except Exception as e:
+                        logger.warning("Invalid test email", email=email, error=str(e))
+                        
+                logger.info("Test mode active", test_emails_count=len(all_subscribers))
+            else:
+                logger.error("No test emails found - add TEST_EMAILS=your-email@gmail.com in .env")
+                return 1
+                
+        elif netlify_config.site_id and netlify_config.access_token:
+            all_subscribers = get_subscribers_from_netlify(netlify_config)
+        else:
+            logger.warning("No Netlify configuration found - no subscribers loaded")
+
+        # Filter subscribers based on their frequency preference and optimal hours
+        active_subscribers = []
+        for subscriber in all_subscribers:
+            if should_send_at_current_hour(int(subscriber.frequency.value)):
+                active_subscribers.append(subscriber)
+
+        logger.info("Subscriber filtering complete", 
+                   total_subscribers=len(all_subscribers),
+                   active_this_hour=len(active_subscribers))
+
+        if dry_run:
+            logger.info("DRY RUN - Email content preview", 
+                       hour_slot=slot, 
+                       phrase_index=idx,
+                       total_subscribers=len(all_subscribers),
+                       active_subscribers=len(active_subscribers))
+            
+            # Show preview of first few subscribers
+            for i, subscriber in enumerate(active_subscribers[:3]):
+                content = build_email_content(subscriber, selected_phrase)
+                logger.info(f"Preview {i+1}", 
+                           recipient=subscriber.email,
+                           frequency=subscriber.frequency.name,
+                           subject=content.subject)
+            return 0
+
+        if not active_subscribers:
+            logger.info("No active subscribers for this hour", 
+                       hour_slot=slot,
+                       total_subscribers=len(all_subscribers))
+            return 0
+
+        # Build email content for all active subscribers
+        email_contents = []
+        for subscriber in active_subscribers:
+            try:
+                content = build_email_content(subscriber, selected_phrase)
+                email_contents.append(content)
+            except Exception as e:
+                logger.error("Failed to build email content", 
+                            subscriber_email=subscriber.email,
+                            error=str(e))
+
+        logger.info("Email content generated", 
+                   emails_to_send=len(email_contents))
+
+        # Send emails
+        success_count, error_count = send_email_batch(email_config, email_contents)
+
+        if error_count == 0:
+            logger.info("All emails sent successfully", 
+                       success_count=success_count,
+                       total_subscribers=len(all_subscribers))
+            return 0
+        else:
+            logger.warning("Some emails failed to send", 
+                          success_count=success_count,
+                          error_count=error_count)
+            return 1 if success_count == 0 else 0  # Return error only if ALL failed
+
+    except Exception as e:
+        logger.error("Fatal error in email automation", error=str(e))
+        return 1
 
 
 def build_email_html(phrase_id: str, phrase_text: str, recipient_email: str = "", frequency: int = 1) -> str:
@@ -517,7 +1094,7 @@ def main(argv: List[str]) -> int:
     token = os.getenv('NETLIFY_ACCESS_TOKEN', '')
     sender = os.getenv('SENDER_EMAIL', 'Frases <no-reply@example.com>')
 
-    phrases = load_phrases(csv_path)
+    phrases = load_phrases_legacy(csv_path)
     # Choose a pseudo-random phrase per hour (deterministic within the hour)
     slot = current_hour_slot()
     seed_bytes = hashlib.sha256(f"{slot}:{len(phrases)}".encode('utf-8')).digest()
@@ -598,4 +1175,9 @@ def main(argv: List[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    # Use modernized main function with fallback to legacy
+    try:
+        raise SystemExit(main_modernized(sys.argv[1:]))
+    except Exception as e:
+        logger.error("Modernized main failed, falling back to legacy", error=str(e))
+        raise SystemExit(main(sys.argv[1:]))
