@@ -196,7 +196,7 @@
         }
         
         if (confirm('¿Estás seguro que quieres cancelar tu suscripción?')) {
-          window.location.href = `mailto:reflexiones@pseudosapiens.com?subject=DESUSCRIBIR&body=Por favor cancela mi suscripción para: ${email}`;
+          window.location.href = `/unsubscribe?email=${encodeURIComponent(email)}`;
         }
       }
     </script>

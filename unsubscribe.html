@@ -286,6 +286,14 @@
       // Mejorar UX del input
       document.addEventListener('DOMContentLoaded', function() {
         const emailInput = document.getElementById('email-input');
+        
+        // Pre-llenar email si viene como parámetro URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailParam = urlParams.get('email');
+        if (emailParam) {
+          emailInput.value = emailParam;
+        }
+        
         emailInput.addEventListener('keypress', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
