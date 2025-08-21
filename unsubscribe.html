@@ -224,7 +224,7 @@
           button.disabled = true;
 
           // Llamada real al webhook de desuscripción
-          const response = await fetch('/webhook/unsubscribe', {
+          const response = await fetch('https://elias-indol.vercel.app/unsubscribe', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
