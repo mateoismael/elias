@@ -113,6 +113,28 @@
           color: #cbd5e1;
         }
       }
+      .success-message {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #10b981;
+      }
+      .error-message {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #ef4444;
+      }
+      @media (prefers-color-scheme: dark) {
+        .success-message {
+          background: #022c22;
+          color: #6ee7b7;
+          border-color: #10b981;
+        }
+        .error-message {
+          background: #2d1b1b;
+          color: #fca5a5;
+          border-color: #ef4444;
+        }
+      }
     </style>
   </head>
   <body>
@@ -129,6 +151,7 @@
 
       <!-- Formulario para actualizar preferencias -->
       <form
+        id="preferences-form"
         name="subscribe"
         method="POST"
         data-netlify="true"
@@ -151,14 +174,14 @@
         
         <label for="frequency">Elige tu nueva frecuencia</label>
         <select id="frequency" name="frequency" required>
+          <option value="24" selected>Una vez al día (minimalista) • 1 frase/día</option>
+          <option value="6">Cada 6 horas (moderado) • 3 frases/día</option>
           <option value="3">Cada 3 horas (equilibrado) • 7 frases/día</option>
           <option value="1">Cada hora (intensivo) • 19 frases/día</option>
-          <option value="6">Cada 6 horas (moderado) • 3 frases/día</option>
-          <option value="24">Una vez al día (minimalista) • 1 frase/día</option>
         </select>
         
         <div class="actions">
-          <button type="submit">Actualizar Preferencias</button>
+          <button type="submit" id="submit-btn">Actualizar Preferencias</button>
           <button type="button" class="button-secondary" onclick="unsubscribe()">
             Desuscribirse Completamente
           </button>
@@ -167,6 +190,10 @@
         <small>
           🔄 Los cambios son instantáneos. Tu próximo email seguirá la nueva frecuencia.
         </small>
+        
+        <!-- Status messages -->
+        <div id="status-message" class="hidden" style="margin-top: 16px; padding: 12px; border-radius: 6px; text-align: center;">
+        </div>
       </form>
 
       <hr style="margin: 20px 0; opacity: 0.2" />
@@ -176,14 +203,100 @@
     </main>
 
     <script>
-      // Mejorar UX - permitir envío con Enter
+      // Modern 2025 JavaScript with progressive enhancement
       document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('preferences-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusMessage = document.getElementById('status-message');
         const emailInput = document.getElementById('email');
+        
+        // Progressive enhancement: Intercept form submission
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          
+          const email = emailInput.value.trim();
+          const frequency = document.getElementById('frequency').value;
+          
+          if (!email || !frequency) {
+            showMessage('Por favor completa todos los campos', 'error');
+            return;
+          }
+          
+          if (!email.includes('@')) {
+            showMessage('Por favor ingresa un email válido', 'error');
+            return;
+          }
+          
+          // Show loading state
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = 'Actualizando...';
+          submitBtn.disabled = true;
+          
+          try {
+            // Call webhook directly with fetch API (2025 best practice)
+            const response = await fetch('https://elias-indol.vercel.app/webhook/netlify-form', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: email,
+                frequency: frequency
+              })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.status === 'success') {
+              const actionText = result.action === 'updated' ? 'actualizadas' : 'configuradas';
+              showMessage(`✅ Preferencias ${actionText} correctamente. Plan: ${getFrequencyText(frequency)}`, 'success');
+              
+              // Optional: Clear form or redirect
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 2000);
+            } else {
+              throw new Error(result.message || 'Error al actualizar preferencias');
+            }
+            
+          } catch (error) {
+            console.error('Error:', error);
+            showMessage('❌ Error al actualizar. Inténtalo nuevamente o contacta soporte.', 'error');
+            
+            // Fallback: Submit form normally to Netlify as backup
+            setTimeout(() => {
+              form.removeEventListener('submit', arguments.callee);
+              form.submit();
+            }, 1000);
+          } finally {
+            // Restore button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+          }
+        });
+        
+        // Helper functions
+        function showMessage(text, type) {
+          statusMessage.textContent = text;
+          statusMessage.className = type === 'success' ? 'success-message' : 'error-message';
+          statusMessage.classList.remove('hidden');
+        }
+        
+        function getFrequencyText(freq) {
+          const map = {
+            '1': 'Intensivo (cada hora)',
+            '3': 'Pro (cada 3h)', 
+            '6': 'Premium (cada 6h)',
+            '24': 'Gratuito (diario)'
+          };
+          return map[freq] || 'Desconocido';
+        }
+        
+        // Enter key support
         emailInput.addEventListener('keypress', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            // Encontrar el botón de actualizar y hacer clic
-            document.querySelector('button[type="submit"]').click();
+            submitBtn.click();
           }
         });
       });
