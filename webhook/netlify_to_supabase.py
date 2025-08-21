@@ -135,6 +135,12 @@ def handle_netlify_form():
             data = request.form.to_dict()
         
         logger.info("Webhook received from Netlify", data=data)
+        print(f"[DEBUG] Raw webhook data: {data}")
+        print(f"[DEBUG] Data type: {type(data)}")
+        print(f"[DEBUG] Email: {data.get('email', 'MISSING')}")
+        print(f"[DEBUG] Frequency: {data.get('frequency', 'MISSING')}")
+        print(f"[DEBUG] Form-name: {data.get('form-name', 'MISSING')}")
+        print(f"[DEBUG] All keys: {list(data.keys())}")
         
         # Validar datos
         if not validate_netlify_webhook(data):
@@ -147,6 +153,10 @@ def handle_netlify_form():
         email = data.get('email', '').strip().lower()
         frequency = data.get('frequency', '24')  # Default: diario
         plan_id = map_frequency_to_plan_id(frequency)
+        
+        print(f"[DEBUG] Processed - Email: {email}")
+        print(f"[DEBUG] Processed - Frequency: {frequency}")
+        print(f"[DEBUG] Processed - Plan ID: {plan_id}")
         
         # Conectar a Supabase
         supabase = get_supabase()
