@@ -71,6 +71,67 @@ def get_user_subscription(supabase, email: str):
         logger.error("Failed to get user subscription", email=email, error=str(e))
         return None
 
+def cancel_existing_subscriptions(supabase, user_id: str):
+    """Cancel all existing active subscriptions for a user"""
+    try:
+        response = supabase.table('subscriptions').update({
+            'status': 'cancelled',
+            'cancelled_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }).eq('user_id', user_id).eq('status', 'active').execute()
+        
+        if response.data:
+            logger.info("Cancelled existing subscriptions", user_id=user_id, count=len(response.data))
+        return True
+    except Exception as e:
+        logger.error("Failed to cancel existing subscriptions", user_id=user_id, error=str(e))
+        return False
+
+def create_or_update_subscription(supabase, user_id: str, plan_id: int):
+    """Create a new subscription or update existing one"""
+    try:
+        # First check if there's an active subscription
+        existing = supabase.table('subscriptions').select('*').eq(
+            'user_id', user_id
+        ).eq('status', 'active').execute()
+        
+        if existing.data:
+            # Update existing subscription
+            response = supabase.table('subscriptions').update({
+                'plan_id': plan_id,
+                'updated_at': datetime.utcnow().isoformat()
+            }).eq('id', existing.data[0]['id']).execute()
+            
+            if response.data:
+                logger.info("Subscription updated", 
+                           user_id=user_id, 
+                           subscription_id=existing.data[0]['id'],
+                           new_plan_id=plan_id)
+                return 'updated'
+        else:
+            # Create new subscription
+            response = supabase.table('subscriptions').insert({
+                'user_id': user_id,
+                'plan_id': plan_id,
+                'status': 'active',
+                'started_at': datetime.utcnow().isoformat()
+            }).execute()
+            
+            if response.data:
+                logger.info("Subscription created", 
+                           user_id=user_id,
+                           subscription_id=response.data[0]['id'],
+                           plan_id=plan_id)
+                return 'created'
+        
+        return None
+    except Exception as e:
+        logger.error("Failed to create/update subscription", 
+                    user_id=user_id, 
+                    plan_id=plan_id, 
+                    error=str(e))
+        return None
+
 def get_all_active_subscribers(supabase):
     """Get all active subscribers with their plan details"""
     try:
@@ -120,11 +181,21 @@ def map_frequency_to_plan_id(frequency: str) -> int:
     }
     
     # Default a plan gratuito si no se especifica o es inválido
-    return frequency_map.get(str(frequency), 1)
+    plan_id = frequency_map.get(str(frequency), 1)
+    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id)
+    return plan_id
 
-@app.route('/webhook/netlify-form', methods=['POST'])
+@app.route('/webhook/netlify-form', methods=['POST', 'OPTIONS'])
 def handle_netlify_form():
     """Endpoint principal para recibir webhooks de Netlify Forms"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
     
     try:
         # Obtener datos del webhook
@@ -134,94 +205,86 @@ def handle_netlify_form():
             # Netlify puede enviar como form data
             data = request.form.to_dict()
         
-        logger.info("Webhook received from Netlify", data=data)
-        print(f"[DEBUG] Raw webhook data: {data}")
-        print(f"[DEBUG] Data type: {type(data)}")
-        print(f"[DEBUG] Email: {data.get('email', 'MISSING')}")
-        print(f"[DEBUG] Frequency: {data.get('frequency', 'MISSING')}")
-        print(f"[DEBUG] Form-name: {data.get('form-name', 'MISSING')}")
-        print(f"[DEBUG] All keys: {list(data.keys())}")
+        logger.info("Webhook received", 
+                   data=data,
+                   content_type=request.content_type,
+                   headers=dict(request.headers))
         
         # Validar datos
         if not validate_netlify_webhook(data):
-            return jsonify({
+            response = jsonify({
                 'status': 'error',
                 'message': 'Invalid webhook data'
-            }), 400
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
         
         # Extraer datos del formulario
         email = data.get('email', '').strip().lower()
         frequency = data.get('frequency', '24')  # Default: diario
         plan_id = map_frequency_to_plan_id(frequency)
         
-        print(f"[DEBUG] Processed - Email: {email}")
-        print(f"[DEBUG] Processed - Frequency: {frequency}")
-        print(f"[DEBUG] Processed - Plan ID: {plan_id}")
+        logger.info("Processing subscription change", 
+                   email=email, 
+                   frequency=frequency, 
+                   plan_id=plan_id)
         
         # Conectar a Supabase
         supabase = get_supabase()
         
-        # Verificar si el usuario ya existe
+        # Verificar si el usuario existe
         existing_user = get_user_by_email(supabase, email)
         
         if existing_user:
-            logger.info("User already exists, updating subscription", 
+            # Usuario existe - actualizar o crear suscripción
+            logger.info("Existing user found", 
                        email=email, 
-                       existing_user_id=existing_user['id'])
+                       user_id=existing_user['id'])
             
-            # Actualizar suscripción existente si cambió el plan
-            existing_subscription = get_user_subscription(supabase, email)
-            if existing_subscription and existing_subscription['plan_id'] != plan_id:
-                # Actualizar plan
-                update_response = supabase.table('subscriptions').update({
+            action = create_or_update_subscription(supabase, existing_user['id'], plan_id)
+            
+            if action:
+                response = jsonify({
+                    'status': 'success',
+                    'message': f'Subscription {action}',
+                    'user_id': existing_user['id'],
                     'plan_id': plan_id,
-                    'updated_at': datetime.utcnow().isoformat()
-                }).eq('user_id', existing_user['id']).eq('status', 'active').execute()
-                
-                if update_response.data:
-                    logger.info("Subscription plan updated", 
-                               email=email, 
-                               old_plan=existing_subscription['plan_id'],
-                               new_plan=plan_id)
-                    return jsonify({
-                        'status': 'success',
-                        'message': 'Subscription updated',
-                        'user_id': existing_user['id'],
-                        'action': 'updated'
-                    })
-            
-            return jsonify({
-                'status': 'success', 
-                'message': 'User already exists',
-                'user_id': existing_user['id'],
-                'action': 'existing'
-            })
+                    'action': action
+                })
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                return response
+            else:
+                response = jsonify({
+                    'status': 'error',
+                    'message': 'Failed to update subscription'
+                })
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                return response, 500
         
         # Crear nuevo usuario
         user = create_user(supabase, email)
         if not user:
             logger.error("Failed to create user", email=email)
-            return jsonify({
+            response = jsonify({
                 'status': 'error',
                 'message': 'Failed to create user'
-            }), 500
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 500
         
-        # Crear suscripción con el plan correspondiente
-        subscription_response = supabase.table('subscriptions').insert({
-            'user_id': user['id'],
-            'plan_id': plan_id,
-            'status': 'active'
-        }).execute()
+        # Crear suscripción para nuevo usuario
+        action = create_or_update_subscription(supabase, user['id'], plan_id)
         
-        if not subscription_response.data:
-            logger.error("Failed to create subscription", 
+        if not action:
+            logger.error("Failed to create subscription for new user", 
                         email=email, 
-                        user_id=user['id'],
-                        plan_id=plan_id)
-            return jsonify({
+                        user_id=user['id'])
+            response = jsonify({
                 'status': 'error',
                 'message': 'Failed to create subscription'
-            }), 500
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 500
         
         logger.info("New user and subscription created successfully",
                    email=email,
@@ -229,20 +292,24 @@ def handle_netlify_form():
                    plan_id=plan_id,
                    frequency=frequency)
         
-        return jsonify({
+        response = jsonify({
             'status': 'success',
             'message': 'User created successfully',
             'user_id': user['id'],
             'plan_id': plan_id,
             'action': 'created'
         })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
         
     except Exception as e:
         logger.error("Webhook processing failed", error=str(e), exc_info=True)
-        return jsonify({
+        response = jsonify({
             'status': 'error',
             'message': 'Internal server error'
-        }), 500
+        })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
 
 @app.route('/webhook/health', methods=['GET'])
 def health_check():
@@ -288,9 +355,18 @@ def get_stats():
             'error': str(e)
         }), 500
 
-@app.route('/unsubscribe', methods=['POST'])
+@app.route('/unsubscribe', methods=['POST', 'OPTIONS'])
 def handle_unsubscribe():
     """Endpoint para procesar desuscripciones desde unsubscribe.html"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
     try:
         # Obtener datos del request
         if request.is_json:
@@ -301,16 +377,20 @@ def handle_unsubscribe():
         email = data.get('email', '').strip().lower()
         
         if not email:
-            return jsonify({
+            response = jsonify({
                 'status': 'error',
                 'message': 'Email requerido'
-            }), 400
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
         
         if '@' not in email:
-            return jsonify({
+            response = jsonify({
                 'status': 'error',
                 'message': 'Email inválido'
-            }), 400
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
         
         logger.info("Processing unsubscribe request", email=email)
         
@@ -320,37 +400,42 @@ def handle_unsubscribe():
         # Verificar si el usuario existe
         user = get_user_by_email(supabase, email)
         if not user:
-            return jsonify({
+            response = jsonify({
                 'status': 'error',
                 'message': 'Email no encontrado en nuestro sistema'
-            }), 404
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 404
         
-        # Cancelar suscripción activa
-        response = supabase.table('subscriptions').update({
-            'status': 'cancelled',
-            'updated_at': datetime.utcnow().isoformat()
-        }).eq('user_id', user['id']).eq('status', 'active').execute()
+        # Cancelar todas las suscripciones activas
+        cancelled = cancel_existing_subscriptions(supabase, user['id'])
         
-        if response.data:
+        if cancelled:
             logger.info("Subscription cancelled successfully", email=email, user_id=user['id'])
-            return jsonify({
+            response = jsonify({
                 'status': 'success',
                 'message': 'Suscripción cancelada exitosamente',
                 'email': email
             })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response
         else:
-            logger.warning("No active subscription found", email=email, user_id=user['id'])
-            return jsonify({
+            logger.warning("Failed to cancel subscription", email=email, user_id=user['id'])
+            response = jsonify({
                 'status': 'error',
-                'message': 'No se encontró suscripción activa para este email'
-            }), 404
+                'message': 'Error al cancelar la suscripción'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 500
             
     except Exception as e:
         logger.error("Unsubscribe processing failed", error=str(e), exc_info=True)
-        return jsonify({
+        response = jsonify({
             'status': 'error',
             'message': 'Error interno del servidor'
-        }), 500
+        })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
 
 if __name__ == '__main__':
     # Solo para testing local
