@@ -1,0 +1,1 @@
+web: gunicorn netlify_to_supabase:app

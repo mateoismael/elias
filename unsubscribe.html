@@ -223,20 +223,29 @@
           button.textContent = 'Verificando...';
           button.disabled = true;
 
-          // Simulamos verificación y desuscripción
-          // En realidad esto llamaría a una función que:
-          // 1. Verifica si el email existe en Netlify Forms
-          // 2. Si existe, lo remueve
-          // 3. Responde con éxito/error
+          // Llamada real al webhook de desuscripción
+          const response = await fetch('/webhook/unsubscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: email })
+          });
           
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Simular delay
+          const result = await response.json();
           
-          // Por ahora, simulamos éxito
-          showSuccess(email);
+          if (response.ok && result.status === 'success') {
+            showSuccess(email);
+          } else {
+            showError(result.message || 'Error al procesar la desuscripción');
+            // Restaurar botón
+            button.textContent = originalText;
+            button.disabled = false;
+          }
           
         } catch (error) {
           console.error('Error:', error);
-          showError();
+          showError('Error de conexión. Inténtalo nuevamente.');
           // Restaurar botón
           event.target.textContent = originalText;
           event.target.disabled = false;
@@ -261,10 +270,17 @@
         successMessage.innerHTML = `<strong>Tu suscripción ha sido cancelada exitosamente.</strong><br>El email <code>${email}</code> no recibirá más frases de Pseudosapiens.`;
       }
 
-      function showError() {
+      function showError(message) {
         document.getElementById('confirm-step').classList.add('hidden');
         document.getElementById('success-step').classList.add('hidden');
         document.getElementById('error-step').classList.remove('hidden');
+        
+        // Actualizar mensaje de error si se proporciona
+        if (message) {
+          const errorStep = document.getElementById('error-step');
+          const errorP = errorStep.querySelector('p');
+          errorP.textContent = message;
+        }
       }
 
       // Mejorar UX del input
