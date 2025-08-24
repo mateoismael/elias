@@ -51,6 +51,18 @@
       p {
         margin: 0 0 16px;
       }
+      .email-input-group {
+        margin: 20px 0;
+      }
+      input[type="email"] {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid #7775;
+        font-size: 1rem;
+        margin-bottom: 8px;
+        box-sizing: border-box;
+      }
       .email-display {
         background: #f8fafc;
         padding: 12px 16px;
@@ -58,6 +70,7 @@
         margin: 16px 0;
         font-family: monospace;
         border: 1px solid #e2e8f0;
+        word-break: break-all;
       }
       @media (prefers-color-scheme: dark) {
         .email-display {
@@ -78,13 +91,18 @@
         cursor: pointer;
         font-weight: 600;
         font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
       .button-primary {
         background: #dc2626;
         color: white;
         border-color: #dc2626;
       }
-      .button-primary:hover {
+      .button-primary:hover:not(:disabled) {
         background: #b91c1c;
       }
       .button-secondary {
@@ -92,7 +110,7 @@
         color: white;
         border-color: #6366f1;
       }
-      .button-secondary:hover {
+      .button-secondary:hover:not(:disabled) {
         background: #4f46e5;
       }
       .button-tertiary {
@@ -100,7 +118,7 @@
         color: #666;
         border-color: #ccc;
       }
-      .button-tertiary:hover {
+      .button-tertiary:hover:not(:disabled) {
         background: #f5f5f5;
       }
       @media (prefers-color-scheme: dark) {
@@ -108,12 +126,12 @@
           color: #aaa;
           border-color: #444;
         }
-        .button-tertiary:hover {
+        .button-tertiary:hover:not(:disabled) {
           background: #222;
         }
       }
       .hidden {
-        display: none;
+        display: none !important;
       }
       .success-message {
         color: #059669;
@@ -123,45 +141,127 @@
         border: 1px solid #059669;
         margin: 16px 0;
       }
+      .error-message {
+        color: #dc2626;
+        background: #fef2f2;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #ef4444;
+        margin: 16px 0;
+      }
       @media (prefers-color-scheme: dark) {
         .success-message {
           background: #022c22;
           color: #6ee7b7;
+        }
+        .error-message {
+          background: #2d1b1b;
+          color: #fca5a5;
+        }
+      }
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #dc2626;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .info-box {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 16px 0;
+        text-align: left;
+      }
+      @media (prefers-color-scheme: dark) {
+        .info-box {
+          background: #451a03;
+          border-color: #d97706;
+          color: #fbbf24;
         }
       }
     </style>
   </head>
   <body>
     <main class="card">
+      <!-- Step 1: Confirm unsubscribe -->
       <div id="confirm-step">
         <h1>¿Deseas desuscribirte?</h1>
         <p>
-          Ingresa tu correo electrónico para desuscribirte de nuestras frases motivacionales.
+          Lamentamos que te vayas. Ingresa tu correo electrónico para confirmar
+          tu desuscripción.
         </p>
-        
-        <form onsubmit="return false;">
-          <label for="email-input" style="display: block; margin-bottom: 8px; font-weight: 500;">
-            Correo electrónico
-          </label>
-          <input
-            type="email"
-            id="email-input"
-            placeholder="tu@email.com"
-            required
-            style="width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid #7775; font-size: 1rem; margin-bottom: 16px;"
-          />
+
+        <div class="info-box">
+          💡 <strong>Tip:</strong> Si solo quieres recibir menos emails, puedes
+          <a href="/preferences" style="color: #6366f1; font-weight: 600"
+            >cambiar la frecuencia</a
+          >
+          en lugar de desuscribirte completamente.
+        </div>
+
+        <form id="unsubscribe-form" onsubmit="return false;">
+          <div class="email-input-group">
+            <label
+              for="email-input"
+              style="
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 500;
+                text-align: left;
+              "
+            >
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              id="email-input"
+              placeholder="tu@email.com"
+              required
+              autocomplete="email"
+            />
+            <small
+              style="
+                display: block;
+                text-align: left;
+                opacity: 0.7;
+                margin-top: 4px;
+              "
+            >
+              Ingresa el mismo email con el que te suscribiste
+            </small>
+          </div>
         </form>
 
-        <p style="font-size: 0.9rem; opacity: 0.8;">
-          Si solo quieres recibir menos emails, puedes <a href="/preferences" style="color: #6366f1;">cambiar la frecuencia</a> en lugar de desuscribirte completamente.
-        </p>
-
         <div class="actions">
-          <button type="button" class="button-primary" onclick="confirmUnsubscribe()">
-            Verificar y desuscribirme
+          <button
+            type="button"
+            class="button-primary"
+            id="confirm-btn"
+            onclick="confirmUnsubscribe()"
+          >
+            Confirmar desuscripción
           </button>
-          <button type="button" class="button-secondary" onclick="goToPreferences()">
-            Solo cambiar frecuencia
+          <button
+            type="button"
+            class="button-secondary"
+            onclick="goToPreferences()"
+          >
+            Mejor cambiar frecuencia
           </button>
           <button type="button" class="button-tertiary" onclick="goHome()">
             Cancelar
@@ -169,15 +269,29 @@
         </div>
       </div>
 
+      <!-- Step 2: Processing -->
+      <div id="processing-step" class="hidden">
+        <h1>Procesando...</h1>
+        <div style="padding: 40px 0">
+          <span
+            class="loading"
+            style="width: 32px; height: 32px; border-width: 3px"
+          ></span>
+        </div>
+        <p>Por favor espera mientras procesamos tu solicitud...</p>
+      </div>
+
+      <!-- Step 3: Success -->
       <div id="success-step" class="hidden">
-        <h1>✅ Desuscripción Completada</h1>
+        <h1 style="color: #059669">✅ Desuscripción Completada</h1>
         <div class="success-message">
           <strong>Tu suscripción ha sido cancelada exitosamente.</strong>
-          <br>No recibirás más emails de Pseudosapiens.
+          <br /><br />
+          <span id="success-email"></span> no recibirá más frases de
+          Pseudosapiens. <br /><br />
+          Gracias por haber sido parte de nuestra comunidad. 💚
         </div>
-        <p>
-          Si cambiaste de opinión, puedes volver a suscribirte en cualquier momento.
-        </p>
+        <p>Si cambias de opinión, siempre serás bienvenido de vuelta.</p>
         <div class="actions">
           <button type="button" class="button-secondary" onclick="goHome()">
             Volver al inicio
@@ -185,16 +299,21 @@
         </div>
       </div>
 
+      <!-- Step 4: Error -->
       <div id="error-step" class="hidden">
-        <h1>❌ Error</h1>
-        <p>
-          No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente o contáctanos.
-        </p>
+        <h1 style="color: #dc2626">❌ Hubo un problema</h1>
+        <div class="error-message" id="error-message">
+          No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente.
+        </div>
         <div class="actions">
-          <button type="button" class="button-tertiary" onclick="location.reload()">
+          <button
+            type="button"
+            class="button-primary"
+            onclick="retryUnsubscribe()"
+          >
             Intentar nuevamente
           </button>
-          <button type="button" class="button-secondary" onclick="goHome()">
+          <button type="button" class="button-tertiary" onclick="goHome()">
             Volver al inicio
           </button>
         </div>
@@ -202,105 +321,159 @@
     </main>
 
     <script>
-      async function confirmUnsubscribe() {
-        const emailInput = document.getElementById('email-input');
-        const email = emailInput.value.trim();
-        
-        if (!email) {
-          alert('Por favor ingresa tu correo electrónico');
-          return;
-        }
+      let currentEmail = "";
+      let isProcessing = false;
 
-        if (!email.includes('@')) {
-          alert('Por favor ingresa un correo electrónico válido');
-          return;
-        }
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        const emailInput = document.getElementById("email-input");
 
-        try {
-          // Mostrar loading
-          const button = event.target;
-          const originalText = button.textContent;
-          button.textContent = 'Verificando...';
-          button.disabled = true;
-
-          // Llamada real al webhook de desuscripción
-          const response = await fetch('https://elias-indol.vercel.app/unsubscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email: email })
-          });
-          
-          const result = await response.json();
-          
-          if (response.ok && result.status === 'success') {
-            showSuccess(email);
-          } else {
-            showError(result.message || 'Error al procesar la desuscripción');
-            // Restaurar botón
-            button.textContent = originalText;
-            button.disabled = false;
-          }
-          
-        } catch (error) {
-          console.error('Error:', error);
-          showError('Error de conexión. Inténtalo nuevamente.');
-          // Restaurar botón
-          event.target.textContent = originalText;
-          event.target.disabled = false;
-        }
-      }
-
-      function goToPreferences() {
-        window.location.href = '/preferences';
-      }
-
-      function goHome() {
-        window.location.href = '/';
-      }
-
-      function showSuccess(email) {
-        document.getElementById('confirm-step').classList.add('hidden');
-        document.getElementById('error-step').classList.add('hidden');
-        document.getElementById('success-step').classList.remove('hidden');
-        
-        // Actualizar mensaje de éxito con el email
-        const successMessage = document.querySelector('.success-message');
-        successMessage.innerHTML = `<strong>Tu suscripción ha sido cancelada exitosamente.</strong><br>El email <code>${email}</code> no recibirá más frases de Pseudosapiens.`;
-      }
-
-      function showError(message) {
-        document.getElementById('confirm-step').classList.add('hidden');
-        document.getElementById('success-step').classList.add('hidden');
-        document.getElementById('error-step').classList.remove('hidden');
-        
-        // Actualizar mensaje de error si se proporciona
-        if (message) {
-          const errorStep = document.getElementById('error-step');
-          const errorP = errorStep.querySelector('p');
-          errorP.textContent = message;
-        }
-      }
-
-      // Mejorar UX del input
-      document.addEventListener('DOMContentLoaded', function() {
-        const emailInput = document.getElementById('email-input');
-        
-        // Pre-llenar email si viene como parámetro URL
+        // Pre-fill email if provided in URL
         const urlParams = new URLSearchParams(window.location.search);
-        const emailParam = urlParams.get('email');
+        const emailParam = urlParams.get("email");
         if (emailParam) {
           emailInput.value = emailParam;
+          currentEmail = emailParam;
         }
-        
-        emailInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
+
+        // Enable enter key to submit
+        emailInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter" && !isProcessing) {
             e.preventDefault();
             confirmUnsubscribe();
           }
         });
+
+        // Focus on email input
+        emailInput.focus();
       });
+
+      async function confirmUnsubscribe() {
+        if (isProcessing) return;
+
+        const emailInput = document.getElementById("email-input");
+        const email = emailInput.value.trim().toLowerCase();
+
+        // Validation
+        if (!email) {
+          alert("Por favor ingresa tu correo electrónico");
+          emailInput.focus();
+          return;
+        }
+
+        // Better email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          alert("Por favor ingresa un correo electrónico válido");
+          emailInput.focus();
+          emailInput.select();
+          return;
+        }
+
+        // Double confirmation for safety
+        const confirmed = confirm(
+          `⚠️ Confirma tu desuscripción\n\n` +
+            `Email: ${email}\n\n` +
+            `¿Estás seguro que deseas dejar de recibir frases motivacionales?\n\n` +
+            `Esta acción cancelará tu suscripción completamente.`
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        currentEmail = email;
+        isProcessing = true;
+
+        // Show processing state
+        showStep("processing");
+
+        try {
+          console.log("Sending unsubscribe request for:", email);
+
+          // Call the unsubscribe endpoint
+          const response = await fetch(
+            "https://elias-indol.vercel.app/unsubscribe",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email: email }),
+            }
+          );
+
+          const result = await response.json();
+          console.log("Response:", result);
+
+          if (response.ok && result.status === "success") {
+            // Success!
+            document.getElementById("success-email").textContent = email;
+            showStep("success");
+          } else if (response.status === 404) {
+            // Email not found
+            showError(
+              `No encontramos el email "${email}" en nuestro sistema.\n\n` +
+                `Por favor verifica que sea el mismo email con el que te suscribiste.`
+            );
+          } else {
+            // Other error
+            showError(
+              result.message ||
+                "Error al procesar la desuscripción. Por favor inténtalo nuevamente."
+            );
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showError(
+            "Error de conexión. Por favor verifica tu conexión a internet e inténtalo nuevamente."
+          );
+        } finally {
+          isProcessing = false;
+        }
+      }
+
+      function showStep(stepName) {
+        // Hide all steps
+        document.getElementById("confirm-step").classList.add("hidden");
+        document.getElementById("processing-step").classList.add("hidden");
+        document.getElementById("success-step").classList.add("hidden");
+        document.getElementById("error-step").classList.add("hidden");
+
+        // Show requested step
+        const stepElement = document.getElementById(`${stepName}-step`);
+        if (stepElement) {
+          stepElement.classList.remove("hidden");
+        }
+      }
+
+      function showError(message) {
+        document.getElementById("error-message").textContent = message;
+        showStep("error");
+      }
+
+      function retryUnsubscribe() {
+        const emailInput = document.getElementById("email-input");
+        emailInput.value = currentEmail;
+        showStep("confirm");
+        emailInput.focus();
+        emailInput.select();
+      }
+
+      function goToPreferences() {
+        const email = document.getElementById("email-input").value.trim();
+        if (email) {
+          window.location.href = `/preferences.html?email=${encodeURIComponent(
+            email
+          )}`;
+        } else {
+          window.location.href = "/preferences.html";
+        }
+      }
+
+      function goHome() {
+        window.location.href = "/";
+      }
     </script>
   </body>
 </html>
