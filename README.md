@@ -5,7 +5,7 @@ Servicio de frases motivacionales por email cada hora (frase aleatoria) usando N
 ## Arquitectura
 
 - Landing estática en Netlify con formulario (Netlify Forms).
-- GitHub Actions corre cada hora (UTC), lee `frases_pilot.csv`, elige una frase aleatoria (determinística dentro de la hora) y la envía a los suscriptores capturados por Netlify Forms.
+- GitHub Actions corre cada hora (UTC), lee `frases_pilot_autores.csv`, elige una frase aleatoria (determinística dentro de la hora) y la envía a los suscriptores capturados por Netlify Forms.
 - Envío de emails via Resend.
 
 ## Requisitos
@@ -19,7 +19,7 @@ Servicio de frases motivacionales por email cada hora (frase aleatoria) usando N
 
 - `index.html`: formulario `name="subscribe"` con `data-netlify="true"`.
 - `netlify.toml`: config del sitio.
-- `frases_pilot.csv`: fuente de frases (columnas `id,text`).
+- `frases_pilot_autores.csv`: fuente de frases (columnas `id,text`).
 - `scripts/send_emails.py`: script Python que:
   - lee frases
   - obtiene suscriptores desde Netlify Forms

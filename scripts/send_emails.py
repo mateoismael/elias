@@ -161,6 +161,7 @@ class Phrase(BaseModel):
     """Validated phrase model."""
     id: str
     text: str = Field(min_length=1, description="Phrase content")
+    author: str = Field(description="Author of the phrase")
     
     @field_validator('text')
     @classmethod
@@ -168,6 +169,14 @@ class Phrase(BaseModel):
         """Ensure phrase text is not just whitespace."""
         if not v.strip():
             raise ValueError("Phrase text cannot be empty or just whitespace")
+        return v.strip()
+    
+    @field_validator('author')
+    @classmethod
+    def validate_author_not_empty(cls, v):
+        """Ensure author is not empty."""
+        if not v or not v.strip():
+            raise ValueError("Author cannot be empty or just whitespace")
         return v.strip()
 
 
@@ -253,7 +262,8 @@ def load_phrases(csv_path: str) -> List[Phrase]:
                     try:
                         phrase = Phrase(
                             id=row.get('id', f'P{i}'),
-                            text=row['text']
+                            text=row['text'],
+                            author=row['author']  # Sin default - debe existir
                         )
                         phrases.append(phrase)
                     except Exception as e:
@@ -278,7 +288,7 @@ def load_phrases_legacy(csv_path: str) -> List[Dict[str, str]]:
     """Load phrases for legacy compatibility - returns dict format."""
     phrases = load_phrases(csv_path)
     # Convert Phrase objects back to dict format for legacy compatibility
-    return [{'id': p.id, 'text': p.text} for p in phrases]
+    return [{'id': p.id, 'text': p.text, 'author': p.author} for p in phrases]
 
 
 def current_hour_slot() -> int:
@@ -532,21 +542,17 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
     now_peru = datetime.now(peru_tz)
     hour_peru = now_peru.hour
     
-    greeting, intro = get_contextual_greeting(hour_peru, subscriber.frequency)
     unique_timestamp = generate_unique_timestamp(subscriber.email, phrase.id)
     
-    # Generate subject
-    subjects = [
-        "Hola",
-        "Buenos días",
-        "Espero estés bien", 
-        "Algo que me hizo pensar",
-        "Quería compartir esto contigo"
-    ]
+    # Generate subject - rotación entre 3 opciones simples
+    subjects = ["Reflexión", "Pensamiento", "Inspiración"]
     subject_index = hash(phrase.id) % len(subjects)
     subject = subjects[subject_index]
     
-    # Build HTML content
+    # Obtener primer nombre del autor para la firma
+    author_first_name = phrase.author.split()[0]  # "Steve" de "Steve Jobs"
+    
+    # Build HTML content - Ultra-minimalista
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -555,23 +561,17 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 </head>
 <body style="margin:0;padding:20px;font-family:system-ui,sans-serif;line-height:1.5;color:#333">
 
-<p style="margin:0 0 20px;font-size:16px">
-{greeting}
-</p>
-
-<p style="margin:20px 0;font-size:16px;color:#555">
-{intro}
-</p>
-
+<!-- SOLO LA FRASE CON SU ESTILO ACTUAL -->
 <p style="margin:20px 0;font-size:17px;font-style:italic;color:#444;padding:15px;background:#f8f9fa;border-left:3px solid #ddd">
 {phrase.text}
 </p>
 
+<!-- FIRMA MINIMA -->
 <p style="margin:20px 0 5px;font-size:14px;color:#666">
-Un saludo,<br>
-Pseudosapiens
+{author_first_name}
 </p>
 
+<!-- ENLACES DEL FOOTER (CONSERVADOS) -->
 <p style="margin:30px 0 0;font-size:12px;color:#999">
 <a href="https://pseudosapiens.com/preferences" style="color:#999">Cambiar frecuencia</a> • 
 <a href="https://pseudosapiens.com/unsubscribe" style="color:#999">Desuscribirse</a>
@@ -583,15 +583,10 @@ Pseudosapiens
 </body>
 </html>"""
 
-    # Build text content
-    text = f"""{greeting}
+    # Build text content - Ultra-minimalista
+    text = f"""{phrase.text}
 
-{intro}
-
-{phrase.text}
-
-Un saludo,
-Pseudosapiens
+{author_first_name}
 
 ---
 Cambiar frecuencia: https://pseudosapiens.com/preferences
@@ -633,8 +628,11 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
         (content.subject + "|" + slot + "|" + content.recipient.email).encode('utf-8')
     ).hexdigest()
     
+    # Generate dynamic sender based on phrase author
+    dynamic_sender = f'"{content.phrase.author}" <reflexiones@pseudosapiens.com>'
+    
     email_data = {
-        "from": config.sender_email,
+        "from": dynamic_sender,  # Sender dinámico por autor
         "to": [content.recipient.email],
         "subject": content.subject,
         "html": content.html,
@@ -656,7 +654,9 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
             logger.info("Email sent successfully", 
                        recipient=content.recipient.email,
                        subject=content.subject,
-                       phrase_id=content.phrase.id)
+                       phrase_id=content.phrase.id,
+                       author=content.phrase.author,
+                       sender=dynamic_sender)
             # Respect rate limits
             time.sleep(config.throttle_seconds)
             return
