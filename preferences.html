@@ -110,11 +110,24 @@
         border-left: 3px solid #6366f1;
         color: #374151;
       }
+      
+      /* Premium Options Styling */
+      .premium-option {
+        color: #9ca3af !important;
+        font-style: italic;
+        background: #f9fafb !important;
+      }
+      
       @media (prefers-color-scheme: dark) {
         .info-box {
           background: #1e293b;
           border-left-color: #818cf8;
           color: #cbd5e1;
+        }
+        
+        .premium-option {
+          color: #6b7280 !important;
+          background: #1f2937 !important;
         }
       }
       .success-message {
@@ -193,10 +206,10 @@
 
         <label for="frequency">Elige tu nueva frecuencia</label>
         <select id="frequency" name="frequency" required>
-          <option value="24">Una vez al día (Gratuito) • 1 frase/día</option>
-          <option value="6">Cada 6 horas (Premium) • 3 frases/día</option>
-          <option value="3" selected>Cada 3 horas (Pro) • 6 frases/día</option>
-          <option value="1">Cada hora (Intensivo) • 19 frases/día</option>
+          <option value="1" disabled class="premium-option">Cada hora • 19 frases/día [Premium S/5]</option>
+          <option value="3" disabled class="premium-option">Cada 3 horas • 8 frases/día [Premium S/5]</option>
+          <option value="6" selected>Cada 6 horas • 3 frases/día (Gratis)</option>
+          <option value="24" disabled class="premium-option">Una vez al día • 1 frase/día [Premium S/5]</option>
         </select>
 
         <div class="actions">
@@ -242,6 +255,25 @@
         if (emailParam) {
           emailInput.value = emailParam;
         }
+
+        // Handle premium option clicks
+        frequencySelect.addEventListener("change", function(e) {
+          const selectedOption = e.target.selectedOptions[0];
+          if (selectedOption && selectedOption.disabled && selectedOption.classList.contains("premium-option")) {
+            // Reset to free option
+            frequencySelect.value = "6";
+            
+            // Show premium upgrade message
+            showMessage("Esta frecuencia requiere Premium (S/ 5.00). Próximamente disponible.", "error");
+            
+            // Optional: Add premium modal or redirect logic here
+            setTimeout(() => {
+              if (confirm("¿Te interesa el plan Premium? Te notificaremos cuando esté disponible.")) {
+                // Could collect email for premium waitlist here
+              }
+            }, 2000);
+          }
+        });
 
         // Handle form submission
         form.addEventListener("submit", async function (e) {
@@ -339,10 +371,10 @@
 
         function getFrequencyText(freq) {
           const map = {
-            1: "Intensivo (cada hora)",
-            3: "Pro (cada 3 horas)",
-            6: "Premium (cada 6 horas)",
-            24: "Gratuito (diario)",
+            1: "Cada hora (Premium S/5)",
+            3: "Cada 3 horas (Premium S/5)", 
+            6: "Cada 6 horas (Gratis)",
+            24: "Una vez al día (Premium S/5)",
           };
           return map[freq] || "Desconocido";
         }

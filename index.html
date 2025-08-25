@@ -6,7 +6,7 @@
     <title>Pseudosapiens - Suscripción</title>
     <meta
       name="description"
-      content="Únete a 1,200+ profesionales que reciben frases motivacionales personalizadas. Elige tu frecuencia ideal."
+      content="Recibe frases motivacionales personalizadas. Plan gratuito disponible. Premium desde S/ 5.00."
     />
     <style>
       :root {
@@ -144,6 +144,20 @@
       }
       small {
         opacity: 0.7;
+      }
+      
+      /* Premium Options Styling */
+      .premium-option {
+        color: #9ca3af !important;
+        font-style: italic;
+        background: #f9fafb !important;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        .premium-option {
+          color: #6b7280 !important;
+          background: #1f2937 !important;
+        }
       }
       
       /* Social Proof Styling */
@@ -388,7 +402,7 @@
         
         <div class="stats">
           <span class="stat">
-            <strong id="subscriber-count">1,247</strong> profesionales activos
+            <strong id="subscriber-count">1,247</strong> personas ya suscritas
           </span>
           •
           <span class="stat">
@@ -427,17 +441,17 @@
           Ingresa tu email para recibir frases motivacionales
         </div>
         
-        <label for="frequency">¿Qué ritmo se adapta mejor a ti?</label>
+        <label for="frequency">¿Qué frecuencia prefieres?</label>
         <select 
           id="frequency" 
           name="frequency" 
           required
           aria-describedby="frequency-help"
         >
-          <option value="3" selected>Cada 3 horas (Pro) • 6 frases/día</option>
-          <option value="1">Cada hora (Intensivo) • 19 frases/día</option>
-          <option value="6">Cada 6 horas (Premium) • 3 frases/día</option>
-          <option value="24">Una vez al día (Gratuito) • 1 frase/día</option>
+          <option value="1" disabled class="premium-option">Cada hora • 19 frases/día [Premium S/5]</option>
+          <option value="3" disabled class="premium-option">Cada 3 horas • 8 frases/día [Premium S/5]</option>
+          <option value="6" selected>Cada 6 horas • 3 frases/día (Gratis)</option>
+          <option value="24" disabled class="premium-option">Una vez al día • 1 frase/día [Premium S/5]</option>
         </select>
         <div id="frequency-help" class="sr-only">
           Elige con qué frecuencia quieres recibir frases motivacionales
@@ -494,6 +508,7 @@
       const form = document.querySelector('form[name="subscribe"]');
       const emailInput = document.getElementById('email');
       const submitButton = form.querySelector('button[type="submit"]');
+      const frequencySelect = document.getElementById('frequency');
       
       // Inline email validation
       function validateEmail(email) {
@@ -583,6 +598,18 @@
       emailInput.addEventListener('blur', function() {
         if (!this.value.trim() || validateEmail(this.value.trim())) {
           this.style.borderColor = '#7775';
+        }
+      });
+
+      // Handle premium option clicks
+      frequencySelect.addEventListener("change", function(e) {
+        const selectedOption = e.target.selectedOptions[0];
+        if (selectedOption && selectedOption.disabled && selectedOption.classList.contains("premium-option")) {
+          // Reset to free option
+          frequencySelect.value = "6";
+          
+          // Show premium alert
+          alert("Esta frecuencia requiere Premium (S/ 5.00). Próximamente disponible.");
         }
       });
       

@@ -1,150 +1,293 @@
-# elias
+# Pseudosapiens - Frases Motivacionales
 
-Servicio de frases motivacionales por email cada hora (frase aleatoria) usando Netlify (Forms) + GitHub Actions + Resend (Agosto 2025).
+Servicio automático de frases motivacionales por email con múltiples frecuencias de suscripción. Sistema completo de landing page optimizada + backend automatizado + base de datos empresarial.
 
-## Arquitectura
+## Arquitectura del Sistema
 
-- Landing estática en Netlify con formulario (Netlify Forms).
-- GitHub Actions corre cada hora (UTC), lee `frases_pilot_autores.csv`, elige una frase aleatoria (determinística dentro de la hora) y la envía a los suscriptores capturados por Netlify Forms.
-- Envío de emails via Resend.
+```mermaid
+graph TD
+    A[Landing Page Netlify] --> B[Netlify Forms]
+    B --> C[Webhook Flask]
+    C --> D[Supabase Database] 
+    E[GitHub Actions Cron] --> F[send_emails.py]
+    F --> D
+    F --> G[Resend Email API]
+    D --> H[4 Planes de Suscripción]
+    I[preferences.html] --> C
+    J[unsubscribe.html] --> C
+```
 
-## Requisitos
+### Componentes Principales
 
-- Cuenta en Netlify y sitio creado a partir de este repo.
-- Activar Netlify Forms (se detecta automáticamente al desplegar `index.html`).
-- Cuenta en Resend, con dominio verificado o dirección de prueba.
-- Configurar Secrets en GitHub: `RESEND_API_KEY`, `SENDER_EMAIL`, `NETLIFY_SITE_ID`, `NETLIFY_ACCESS_TOKEN`.
+1. **Landing Page** (`index.html`) - Página de conversión optimizada
+2. **Base de Datos** (Supabase) - Gestión de usuarios y suscripciones
+3. **Email Engine** (`scripts/send_emails.py`) - Envío automatizado
+4. **Webhook API** (`webhook/`) - Integración Netlify → Supabase
+5. **GitHub Actions** - Automatización de envíos cada hora
 
-## Archivos clave
+## Características Principales
 
-- `index.html`: formulario `name="subscribe"` con `data-netlify="true"`.
-- `netlify.toml`: config del sitio.
-- `frases_pilot_autores.csv`: fuente de frases (columnas `id,text`).
-- `scripts/send_emails.py`: script Python que:
-  - lee frases
-  - obtiene suscriptores desde Netlify Forms
-  - envía una frase aleatoria por hora vía Resend
-- `.github/workflows/send_emails.yml`: cron cada hora.
+### Landing Page Ultra-Optimizada
+- **Social Proof Animado**: Métricas dinámicas para generar confianza
+- **Exit-Intent Detection**: Modal con oferta alternativa al intentar salir
+- **Validación en Tiempo Real**: Feedback inmediato con accesibilidad WCAG 2.2
+- **Responsive Design**: Mobile-first con touch targets optimizados
+- **Dark Mode**: Soporte automático para preferencias del sistema
+- **A/B Testing**: Rotación de subjects para optimizar engagement
 
-## Configuración (pasos)
+### Sistema de Planes
+| Plan | Descripción | Precio |
+|------|-------------|--------|
+| **Gratuito** | 3 frases/día (cada 6 horas) | S/ 0 |
+| **Premium** | Acceso a TODAS las frecuencias:<br>• 19 frases/día (cada hora)<br>• 8 frases/día (cada 3 horas)<br>• 1 frase/día (diario) | S/ 5.00 |
 
-1. Despliega en Netlify
+### Email Engine Avanzado
+- **Horarios Psicológicos**: Envíos en horarios óptimos (Peru timezone)
+- **Sender Dinámico**: Email "from" personalizado por autor de la frase
+- **Anti-Agrupación**: Timestamps únicos para evitar threading en Gmail
+- **Rate Limiting**: Respeta límites de Resend con backoff inteligente
+- **Logging Estructurado**: JSON logs para monitoreo profesional
+- **Fallback System**: Main moderno con fallback a legacy automático
 
-   - Conecta el repo y despliega. Netlify detectará el formulario `subscribe` al primer deploy.
-   - En Netlify, ve a Site Settings > General > Site details para copiar el `Site ID`.
-   - Crea un personal access token en Netlify (User settings > Applications > Personal access tokens).
+## 📦 Instalación y Configuración
 
-2. Configura Secrets en GitHub (Settings > Secrets and variables > Actions)
+### 1. Dependencias
+```bash
+pip install -r requirements.txt
+```
 
-   - `RESEND_API_KEY`: tu API key de Resend.
-   - `SENDER_EMAIL`: e.g. `Frases <no-reply@tu-dominio.com>` (usa un dominio verificado en Resend).
-   - `NETLIFY_SITE_ID`: el Site ID del sitio.
-   - `NETLIFY_ACCESS_TOKEN`: tu token personal de Netlify con acceso de lectura a forms.
+**Dependencias principales:**
+```
+resend                # Email delivery service
+supabase>=2.0.0      # Database client
+structlog>=25.0.0    # Structured logging  
+pydantic[email]>=2.0.0 # Data validation
+flask                # Webhook API
+python-dotenv        # Environment management
+```
 
-3. Prueba el flujo
-   - Haz una suscripción desde `index.html` desplegado (ingresa un email tuyo).
-   - Ejecuta manualmente el workflow en GitHub (tab Actions > Send Motivational Phrases > Run workflow) o espera al cron.
+### 2. Variables de Entorno Requeridas
 
-## Mejoras Python 2025 🚀
+```bash
+# Resend Email Service
+RESEND_API_KEY=re_xxxxxxxxx
+SENDER_EMAIL="Pseudosapiens <reflexiones@pseudosapiens.com>"
 
-### Nuevas Características Implementadas
-- **Logging Estructurado JSON**: Logs en formato JSON con contexto enriquecido para monitoreo profesional
-- **Validación de Datos con Pydantic**: Modelos type-safe para emails, frecuencias y contenido
-- **Sistema de Fallback Automático**: Función principal modernizada con fallback robusto a versión legacy
-- **Horarios Psicológicamente Optimizados**: Envíos en horarios de mayor impacto emocional (Peru timezone)
-- **Seguridad Mejorada**: Tokens HMAC para desuscripción segura y timestamps únicos anti-agrupación
-- **Manejo de Errores Específico**: Tratamiento diferenciado por tipo de error (red, rate limiting, etc.)
+# Supabase Database  
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-### Nuevas Dependencias
-- `structlog>=25.0.0`: Logging estructurado JSON
-- `pydantic[email]>=2.0.0`: Validación de datos y emails
-- `python-dotenv>=1.0.0`: Carga automática de archivos .env
+# Netlify (solo para compatibilidad legacy)
+NETLIFY_SITE_ID=xxxxxxxx-xxxx-xxxx
+NETLIFY_ACCESS_TOKEN=xxxxxxxxxxxxx
 
-### Variables de Entorno Avanzadas (Opcionales)
-- `RESEND_THROTTLE_SECONDS`: Segundos entre emails (default: 0.6)
-- `RESEND_MAX_RETRIES`: Reintentos máximos en rate limiting (default: 8)
-- `UNSUBSCRIBE_SECRET`: Clave secreta para tokens de desuscripción HMAC
+# Opcionales - Tuning
+RESEND_THROTTLE_SECONDS=0.6
+RESEND_MAX_RETRIES=8
+UNSUBSCRIBE_SECRET=tu-clave-secreta-hmac
+PHRASES_CSV=frases_pilot_autores.csv
+```
 
-## Desarrollo Local (Modernizado)
+### 3. Base de Datos (Supabase)
 
-1. **Instalación completa:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+1. Crear proyecto en [Supabase](https://supabase.com)
+2. Ejecutar el schema desde `database/schema.sql`
+3. Configurar variables `SUPABASE_URL` y `SUPABASE_KEY`
 
-2. **Variables de entorno (.env):**
-   ```bash
-   # Copia .env desde el ejemplo y configura:
-   RESEND_API_KEY=tu_api_key
-   SENDER_EMAIL="Tu Nombre <tu@dominio.com>"
-   TEST_MODE=true
-   TEST_EMAILS=tu-email@gmail.com
-   ```
+```sql
+-- El schema incluye:
+-- users (gestión de usuarios)
+-- subscription_plans (4 planes configurados)  
+-- subscriptions (suscripciones activas)
+-- payments (historial de pagos futuros)
+-- Indices y triggers automáticos
+```
 
-3. **Testing y validación:**
-   ```bash
-   # Dry-run con logging estructurado JSON
-   python scripts/send_emails.py --dry-run
-   
-   # Test mode con envío real
-   python scripts/send_emails.py --test
-   
-   # Validación de datos automática
-   python scripts/send_emails.py --dry-run  # Detecta emails inválidos
-   ```
+### 4. Despliegue del Webhook
 
-## Logging y Monitoreo
+El webhook (`webhook/netlify_to_supabase.py`) debe desplegarse en un servicio como:
+- **Vercel** (recomendado) - `vercel.json` incluido
+- **Heroku** - `Procfile` incluido  
+- **Railway** / **Render** / etc.
 
-El sistema usa **logging estructurado JSON** para facilitar el monitoreo:
-- Logs en formato JSON con timestamps ISO 8601
-- Contexto enriquecido por operación (recipient, phrase_id, status_code)
-- Niveles apropiados: INFO (operaciones), WARNING (validación), ERROR (fallos)
-- Compatible con Elasticsearch, Splunk, y sistemas de agregación
+**Endpoints disponibles:**
+- `POST /webhook/netlify-form` - Procesar suscripciones
+- `POST /unsubscribe` - Procesar desuscripciones
+- `GET /webhook/health` - Health check
+- `GET /webhook/stats` - Estadísticas del sistema
 
-**Ejemplo de log:**
-```json
+### 5. GitHub Actions
+
+El archivo `.github/workflows/send_emails.yml` está configurado para:
+- ⏰ Ejecutar cada hora automáticamente
+- 🧪 Permitir ejecución manual para testing
+- 📊 Usar secrets configurados en el repo
+
+**Secrets requeridos en GitHub:**
+- `RESEND_API_KEY`
+- `SENDER_EMAIL` 
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+
+### 6. Configuración de Netlify
+
+```toml
+# netlify.toml
+[build]
+  command = ""
+  publish = "."
+
+[[redirects]]
+  from = "/preferences"
+  to = "/preferences.html"
+  status = 200
+
+[[redirects]]  
+  from = "/unsubscribe"
+  to = "/unsubscribe.html"
+  status = 200
+```
+
+## 🧪 Testing y Desarrollo
+
+### Modo de Prueba
+```bash
+# Testing local con emails de prueba
+export TEST_MODE=true
+export TEST_EMAILS="tu-email@gmail.com,otro@test.com"
+python scripts/send_emails.py --test
+
+# Dry run para ver logs sin enviar
+python scripts/send_emails.py --dry-run
+
+# Ver estadísticas de la base de datos
+curl https://tu-webhook-url.vercel.app/webhook/stats
+```
+
+### Debugging con Logs Estructurados
+```bash
+# Ver todos los logs detallados
+python scripts/send_emails.py --dry-run | jq
+
+# Ejemplo de output:
 {
   "event": "Email sent successfully",
   "recipient": "user@example.com",
-  "subject": "Buenos días",
-  "phrase_id": "P131",
-  "timestamp": "2025-08-19T15:46:55.382111Z",
+  "phrase_id": "P042",
+  "author": "Steve Jobs", 
+  "sender": "\"Steve Jobs\" <reflexiones@pseudosapiens.com>",
+  "timestamp": "2025-08-25T15:46:55Z",
   "level": "info"
 }
 ```
 
-## Troubleshooting
-
-### Problemas Comunes
-- **"Pydantic not installed"**: Ejecuta `pip install pydantic[email]`
-- **"structlog not found"**: Ejecuta `pip install structlog>=25.0.0`
-- **Rate limiting (429 errors)**: Ajusta `RESEND_THROTTLE_SECONDS=1.0` en .env
-- **Emails inválidos**: El sistema los detecta automáticamente y continúa con válidos
-
-### Validación de Configuración
-El script valida automáticamente:
-- ✅ Formato de emails con Pydantic EmailStr
-- ✅ Frecuencias válidas (1, 3, 6, 24 horas únicamente)
-- ✅ Variables de entorno requeridas (API keys, configuración)
-- ✅ Conexión a servicios externos (Netlify, Resend)
-
-### Modo Debug Avanzado
+### Health Checks
 ```bash
-# Ver todos los logs detallados
-python scripts/send_emails.py --dry-run
+# Verificar estado del webhook
+curl https://tu-webhook.vercel.app/webhook/health
 
-# Forzar test de fallback (solo desarrollo)
-python scripts/send_emails.py --test-fallback --dry-run
+# Ver estadísticas de suscriptores
+curl https://tu-webhook.vercel.app/webhook/stats
 ```
 
-## Notas
+## 📊 Monitoreo y Métricas
 
-- Zona horaria: el cron corre en UTC; la selección de frase se fija por hora UTC para evitar duplicados.
-- Idempotencia: se añade un encabezado `Idempotency-Key` por slot para evitar duplicados si hay reintentos.
-- Baja: el correo indica responder con "UNSUBSCRIBE" (implementar lógica de baja automática sería un siguiente paso, p.ej. lista en KV o Supabase y filtrado en el script).
+### Métricas Clave Monitoreadas
+- **Crecimiento de suscriptores** por plan
+- **Emails enviados** por hora/día/mes con métricas de delivery
+- **Rate limiting** y manejo inteligente de errores
+- **Conversiones** y optimizaciones en landing page
+- **Gestión de bajas** y feedback de usuarios
 
-## Próximos pasos sugeridos
+### Logs Estructurados
+Todos los logs están en formato JSON para integración con:
+- **Elasticsearch + Kibana**
+- **Splunk**
+- **DataDog** 
+- **New Relic**
+- **Grafana + Loki**
 
-- Confirmación de doble opt-in y enlace de desuscripción.
-- Auditoría de entregabilidad (SPF/DKIM/DMARC en Resend y dominio propio).
-- Persistir suscriptores en una BD (Supabase) y marcar estados (activo/baja/rebote).
+## 🔒 Seguridad Implementada
+
+- **HMAC Tokens** para desuscripción segura (30 días de validez)
+- **CORS configurado** para webhooks cross-origin
+- **Validación de datos** server-side con Pydantic
+- **Rate limiting** para prevenir abuso
+- **Environment secrets** para todas las credenciales
+- **SQL injection protection** con Supabase ORM
+
+## 📈 Optimizaciones de Conversión
+
+### Landing Page
+- **Exit-intent modal** con oferta alternativa (1 email/semana)
+- **Social proof animado** con métricas dinámicas de confianza
+- **Validación en tiempo real** con UX mejorada
+- **Mobile optimization** con touch targets WCAG compliant
+
+### Email Delivery
+- **Horarios psicológicos** para mayor impacto emocional
+- **Sender personalizado** por autor de cada frase
+- **Subject line rotation** para evitar fatiga
+- **Anti-threading** con timestamps únicos
+
+## 🛠️ Arquitectura de Datos
+
+### Flujo de Datos
+1. **Usuario se suscribe** → Landing page
+2. **Formulario enviado** → Netlify Forms → Webhook 
+3. **Webhook procesa** → Crea usuario en Supabase
+4. **GitHub Action ejecuta** → Cada hora UTC
+5. **Script consulta** → Supabase para usuarios activos
+6. **Filtra por horario** → Según plan de suscripción
+7. **Envía emails** → Resend API con contexto personalizado
+
+### Base de Datos Schema
+```sql
+users (id, email, created_at)
+  ↓
+subscriptions (user_id, plan_id, status, started_at, expires_at)
+  ↓
+subscription_plans (id, name, frequency_hours, price_soles, max_emails_per_day)
+  ↓ 
+payments (subscription_id, payment_id, amount, status)
+```
+
+## 🚀 Próximos Pasos
+
+### Funcionalidades Planificadas
+- [ ] **Dashboard de Admin** para gestión de contenido
+- [ ] **A/B Testing** de subject lines y horarios
+- [ ] **Integración de pagos** para suscripciones premium
+- [ ] **Analytics avanzado** con métricas de engagement
+- [ ] **Personalización IA** de contenido por usuario
+- [ ] **API pública** para integraciones third-party
+
+### Optimizaciones Técnicas
+- [ ] **CDN para assets** estáticos
+- [ ] **Database connection pooling**
+- [ ] **Email template engine** más flexible
+- [ ] **Background job queues** para procesos pesados
+- [ ] **Automated testing** suite completa
+
+## 📝 Notas Técnicas
+
+### Zona Horaria
+- **GitHub Actions**: Ejecuta en UTC cada hora
+- **Horarios de envío**: Optimizados para Peru (UTC-5)
+- **Frases seleccionadas**: Determinísticamente por hora UTC
+
+### Idempotencia
+- **Idempotency-Key** por email y slot temporal
+- **Evita duplicados** en reintentos o fallos
+- **Message-ID único** para threading control
+
+### Rate Limiting
+- **Resend**: 2 requests/segundo máximo
+- **Backoff automático** en HTTP 429
+- **Retry-After header** respetado
+
+---
+
+**Estado actual**: ✅ En producción con sistema automatizado  
+**Arquitectura**: Escalable y preparada para crecimiento  
+**Última actualización**: Agosto 2025

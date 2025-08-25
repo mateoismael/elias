@@ -172,17 +172,18 @@ def validate_netlify_webhook(data: Dict[str, Any]) -> bool:
     return True
 
 def map_frequency_to_plan_id(frequency: str) -> int:
-    """Mapear frecuencia string a plan_id de Supabase"""
-    frequency_map = {
-        '1': 4,   # Intensivo (cada hora)
-        '3': 3,   # Pro (cada 3 horas)  
-        '6': 2,   # Premium (cada 6 horas)
-        '24': 1,  # Gratuito (diario)
-    }
+    """Mapear frecuencia a plan_id - Modelo Simplificado"""
+    # MODELO SIMPLIFICADO:
+    # Plan 1 = GRATUITO (6 horas, 3 frases/día) - S/ 0.00
+    # Plan 2 = PREMIUM (1h, 3h, 24h) - S/ 5.00
     
-    # Default a plan gratuito si no se especifica o es inválido
-    plan_id = frequency_map.get(str(frequency), 1)
-    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id)
+    if str(frequency) == '6':
+        plan_id = 1  # Plan gratuito
+    else:
+        plan_id = 2  # Plan premium (cualquier otra frecuencia)
+    
+    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id, 
+               plan_type="free" if plan_id == 1 else "premium")
     return plan_id
 
 @app.route('/webhook/netlify-form', methods=['POST', 'OPTIONS'])
@@ -221,7 +222,12 @@ def handle_netlify_form():
         
         # Extraer datos del formulario
         email = data.get('email', '').strip().lower()
-        frequency = data.get('frequency', '24')  # Default: diario
+        frequency = data.get('frequency', '6')  # Default: 6 horas (3 frases/día)
+        
+        # Solo permitir plan gratuito (6 horas) por ahora
+        if frequency != '6':
+            frequency = '6'  # Force free plan
+        
         plan_id = map_frequency_to_plan_id(frequency)
         
         logger.info("Processing subscription change", 

@@ -759,7 +759,7 @@ def main_modernized(argv: List[str]) -> int:
         netlify_config = NetlifyConfig.from_env()
         
         # Load and select phrase
-        csv_path = os.getenv('PHRASES_CSV', 'frases_pilot.csv')
+        csv_path = os.getenv('PHRASES_CSV', 'frases_pilot_autores.csv')
         phrases = load_phrases(csv_path)
         
         # Choose pseudo-random phrase per hour (deterministic within the hour)
@@ -1156,7 +1156,7 @@ def main(argv: List[str]) -> int:
         return 0
 
     # Config
-    csv_path = os.getenv('PHRASES_CSV', 'frases_pilot.csv')
+    csv_path = os.getenv('PHRASES_CSV', 'frases_pilot_autores.csv')
     form_name = os.getenv('NETLIFY_FORM_NAME', 'subscribe')
     site_id = os.getenv('NETLIFY_SITE_ID', '')
     token = os.getenv('NETLIFY_ACCESS_TOKEN', '')
