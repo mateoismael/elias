@@ -176,7 +176,7 @@
         preferencias se activarán inmediatamente.
       </p>
       <div class="info-box">
-        ✨ <strong>¿Cómo funciona?</strong> Solo recibirás emails en tu nueva
+        <strong>¿Cómo funciona?</strong> Solo recibirás emails en tu nueva
         frecuencia elegida. No habrá duplicados. Los cambios son instantáneos.
       </div>
 
@@ -200,7 +200,7 @@
         </select>
 
         <div class="actions">
-          <button type="submit" id="submit-btn">Actualizar Preferencias</button>
+          <button type="submit" id="submit-btn">Guardar cambios</button>
           <button
             type="button"
             class="button-secondary"
@@ -293,7 +293,7 @@
                 result.action === "updated" ? "actualizadas" : "configuradas";
               const planName = getFrequencyText(frequency);
               showMessage(
-                `✅ Preferencias ${actionText} correctamente. Plan: ${planName}`,
+                `Preferencias ${actionText} correctamente. Plan: ${planName}`,
                 "success"
               );
 
@@ -312,7 +312,7 @@
           } catch (error) {
             console.error("Error:", error);
             showMessage(
-              "❌ Error al actualizar preferencias. Por favor inténtalo nuevamente.",
+              "Error al actualizar preferencias. Por favor inténtalo nuevamente.",
               "error"
             );
           } finally {

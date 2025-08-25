@@ -207,7 +207,7 @@
         </p>
 
         <div class="info-box">
-          💡 <strong>Tip:</strong> Si solo quieres recibir menos emails, puedes
+          <strong>Tip:</strong> Si solo quieres recibir menos emails, puedes
           <a href="/preferences" style="color: #6366f1; font-weight: 600"
             >cambiar la frecuencia</a
           >
@@ -254,7 +254,7 @@
             id="confirm-btn"
             onclick="confirmUnsubscribe()"
           >
-            Confirmar desuscripción
+            Desuscribirme definitivamente
           </button>
           <button
             type="button"
@@ -283,13 +283,13 @@
 
       <!-- Step 3: Success -->
       <div id="success-step" class="hidden">
-        <h1 style="color: #059669">✅ Desuscripción Completada</h1>
+        <h1 style="color: #059669">Desuscripción Completada</h1>
         <div class="success-message">
           <strong>Tu suscripción ha sido cancelada exitosamente.</strong>
           <br /><br />
           <span id="success-email"></span> no recibirá más frases de
           Pseudosapiens. <br /><br />
-          Gracias por haber sido parte de nuestra comunidad. 💚
+          Gracias por haber sido parte de nuestra comunidad.
         </div>
         <p>Si cambias de opinión, siempre serás bienvenido de vuelta.</p>
         <div class="actions">
@@ -301,7 +301,7 @@
 
       <!-- Step 4: Error -->
       <div id="error-step" class="hidden">
-        <h1 style="color: #dc2626">❌ Hubo un problema</h1>
+        <h1 style="color: #dc2626">Hubo un problema</h1>
         <div class="error-message" id="error-message">
           No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente.
         </div>
@@ -372,7 +372,7 @@
 
         // Double confirmation for safety
         const confirmed = confirm(
-          `⚠️ Confirma tu desuscripción\n\n` +
+          `Confirma tu desuscripción\n\n` +
             `Email: ${email}\n\n` +
             `¿Estás seguro que deseas dejar de recibir frases motivacionales?\n\n` +
             `Esta acción cancelará tu suscripción completamente.`
