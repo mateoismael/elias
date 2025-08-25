@@ -51,6 +51,68 @@
       p {
         margin: 0 0 16px;
       }
+      
+      /* Accessibility helpers */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      
+      /* WCAG 2.2 Focus Enhancement */
+      input:focus,
+      select:focus,
+      button:focus {
+        outline: 2px solid #6366f1;
+        outline-offset: 2px;
+      }
+      
+      /* High contrast focus for accessibility */
+      @media (prefers-contrast: high) {
+        input:focus,
+        select:focus,
+        button:focus {
+          outline: 3px solid #000;
+        }
+      }
+      
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        .card {
+          padding: 20px 16px;
+          margin: 16px;
+        }
+        
+        input[type="email"],
+        select,
+        button {
+          font-size: 16px; /* Prevent zoom on iOS */
+          min-height: 52px; /* Larger touch targets on mobile */
+        }
+        
+        form {
+          gap: 16px; /* More spacing on mobile */
+        }
+        
+        h1 {
+          font-size: 1.5rem;
+          line-height: 1.3;
+        }
+      }
+      
+      /* Reduce motion for users who prefer it */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
       form {
         display: grid;
         gap: 12px;
@@ -61,17 +123,24 @@
       }
       input[type="email"],
       select {
-        padding: 12px 14px;
+        padding: 16px 16px;
         border-radius: 8px;
         border: 1px solid #7775;
         font-size: 1rem;
+        min-height: 48px; /* WCAG 2.2 touch target size */
+        box-sizing: border-box;
       }
       button {
-        padding: 12px 16px;
+        padding: 16px 20px;
         border-radius: 8px;
         border: 1px solid #7775;
         cursor: pointer;
         font-weight: 600;
+        font-size: 1rem;
+        background: #6366f1;
+        color: #fff;
+        min-height: 48px; /* WCAG 2.2 touch target size */
+        min-width: 48px;
       }
       small {
         opacity: 0.7;
@@ -108,15 +177,36 @@
           type="email"
           placeholder="tu@email.com"
           required
+          autocomplete="email"
+          aria-describedby="email-help"
+          aria-invalid="false"
         />
+        <div id="email-help" class="sr-only">
+          Ingresa tu email para recibir frases motivacionales
+        </div>
+        
         <label for="frequency">¿Qué ritmo se adapta mejor a ti?</label>
-        <select id="frequency" name="frequency" required>
+        <select 
+          id="frequency" 
+          name="frequency" 
+          required
+          aria-describedby="frequency-help"
+        >
           <option value="3" selected>Cada 3 horas (Pro) • 6 frases/día</option>
           <option value="1">Cada hora (Intensivo) • 19 frases/día</option>
           <option value="6">Cada 6 horas (Premium) • 3 frases/día</option>
           <option value="24">Una vez al día (Gratuito) • 1 frase/día</option>
         </select>
-        <button type="submit">Comenzar ahora gratis</button>
+        <div id="frequency-help" class="sr-only">
+          Elige con qué frecuencia quieres recibir frases motivacionales
+        </div>
+        
+        <button type="submit" aria-describedby="submit-help">
+          Comenzar ahora gratis
+        </button>
+        <div id="submit-help" class="sr-only">
+          Al enviar el formulario te suscribirás para recibir emails
+        </div>
         <small
           >Al enviar, aceptas recibir correos. Incluimos instrucciones para
           cancelar en cada email.</small
@@ -129,5 +219,103 @@
         No compartimos tu información.
       </p>
     </main>
+
+    <script>
+      // Modern form validation 2025
+      const form = document.querySelector('form[name="subscribe"]');
+      const emailInput = document.getElementById('email');
+      const submitButton = form.querySelector('button[type="submit"]');
+      
+      // Inline email validation
+      function validateEmail(email) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+      }
+      
+      function showFieldError(input, message) {
+        // Remove existing error
+        const existingError = input.parentNode.querySelector('.field-error');
+        if (existingError) existingError.remove();
+        
+        // Add error message
+        const error = document.createElement('small');
+        error.className = 'field-error';
+        error.id = `${input.id}-error`;
+        error.setAttribute('aria-live', 'polite');
+        error.style.cssText = 'color: #dc2626; font-size: 0.875rem; margin-top: 4px; display: block;';
+        error.textContent = message;
+        input.parentNode.appendChild(error);
+        input.style.borderColor = '#dc2626';
+        
+        // Update ARIA attributes
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', `${input.id}-help ${input.id}-error`);
+      }
+      
+      function clearFieldError(input) {
+        const existingError = input.parentNode.querySelector('.field-error');
+        if (existingError) existingError.remove();
+        input.style.borderColor = '#7775';
+        
+        // Update ARIA attributes
+        input.setAttribute('aria-invalid', 'false');
+        input.setAttribute('aria-describedby', `${input.id}-help`);
+      }
+      
+      // Real-time email validation
+      emailInput.addEventListener('input', function() {
+        const email = this.value.trim();
+        
+        if (!email) {
+          clearFieldError(this);
+          return;
+        }
+        
+        if (!validateEmail(email)) {
+          showFieldError(this, 'Ingresa un email válido (ej: tu@email.com)');
+        } else {
+          clearFieldError(this);
+        }
+      });
+      
+      // Form submission with validation
+      form.addEventListener('submit', function(e) {
+        const email = emailInput.value.trim();
+        let hasErrors = false;
+        
+        // Validate email
+        if (!email) {
+          showFieldError(emailInput, 'El email es requerido');
+          hasErrors = true;
+        } else if (!validateEmail(email)) {
+          showFieldError(emailInput, 'Ingresa un email válido');
+          hasErrors = true;
+        }
+        
+        if (hasErrors) {
+          e.preventDefault();
+          emailInput.focus();
+          return false;
+        }
+        
+        // Show loading state
+        submitButton.textContent = 'Procesando...';
+        submitButton.disabled = true;
+        
+        // Let form submit naturally to Netlify
+        return true;
+      });
+      
+      // Focus enhancement
+      emailInput.addEventListener('focus', function() {
+        this.style.borderColor = '#6366f1';
+      });
+      
+      emailInput.addEventListener('blur', function() {
+        if (!this.value.trim() || validateEmail(this.value.trim())) {
+          this.style.borderColor = '#7775';
+        }
+      });
+    </script>
   </body>
 </html>
