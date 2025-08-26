@@ -404,14 +404,14 @@
           <span class="stat">
             <strong id="subscriber-count">1,247</strong> personas ya suscritas
           </span>
-          •
+          -
           <span class="stat">
             <strong id="emails-sent">89,420</strong> frases enviadas este mes
           </span>
         </div>
       </div>
       <p style="font-size: 0.9rem; opacity: 0.8;">
-        Gratis • Sin spam • Cancela cuando quieras
+        Gratis - Sin spam - Cancela cuando quieras
       </p>
 
       <!-- Netlify Forms: nombre del formulario "subscribe" -->
@@ -448,10 +448,11 @@
           required
           aria-describedby="frequency-help"
         >
-          <option value="1" disabled class="premium-option">Cada hora • 19 frases/día [Premium S/5]</option>
-          <option value="3" selected>Cada 3 horas • 8 frases/día (Gratis)</option>
-          <option value="6" disabled class="premium-option">Cada 6 horas • 4 frases/día [Premium S/5]</option>
-          <option value="24" disabled class="premium-option">Una vez al día • 1 frase/día [Premium S/5]</option>
+          <option value="weekly-3" selected>3/semana (L-M-V, 8:00) - Gratis</option>
+          <option value="1-daily" disabled class="premium-option">1/día (8:00) [Premium S/5]</option>
+          <option value="2-daily" disabled class="premium-option">2/día (8:00, 17:00) [Premium S/5]</option>
+          <option value="3-daily" disabled class="premium-option">3/día (8:00, 14:00, 20:00) [Premium S/5]</option>
+          <option value="4-daily" disabled class="premium-option">4/día (8:00, 12:00, 17:00, 21:00) [Premium S/5]</option>
         </select>
         <div id="frequency-help" class="sr-only">
           Elige con qué frecuencia quieres recibir frases motivacionales
@@ -483,7 +484,7 @@
         <button class="modal-close" onclick="closeExitModal()" aria-label="Cerrar modal">&times;</button>
         
         <h2 id="modal-title">¡Espera! Una última oportunidad</h2>
-        <p>¿Qué tal si empezamos con solo <strong>1 frase por semana</strong>?</p>
+        <p>¿Qué tal si empezamos con <strong>3 frases por semana</strong>?<br><small>Lunes-Miércoles-Viernes a las 8:00 AM</small></p>
         
         <form class="mini-form" onsubmit="submitExitIntent(event)">
           <input 
@@ -499,7 +500,7 @@
           </button>
         </form>
         
-        <small>Solo 1 email cada domingo. Cancela cuando quieras.</small>
+        <small>3 frases por semana (L-M-V). Deliverability-safe. Cancela cuando quieras.</small>
       </div>
     </div>
 
@@ -601,15 +602,15 @@
         }
       });
 
-      // Handle premium option clicks
+      // Handle premium option clicks (Updated 2025)
       frequencySelect.addEventListener("change", function(e) {
         const selectedOption = e.target.selectedOptions[0];
         if (selectedOption && selectedOption.disabled && selectedOption.classList.contains("premium-option")) {
-          // Reset to free option
-          frequencySelect.value = "3";
+          // Reset to free option (new default)
+          frequencySelect.value = "weekly-3";
           
-          // Show premium alert
-          alert("Esta frecuencia requiere Premium (S/ 5.00). Próximamente disponible.");
+          // Show premium alert with new model
+          alert("Esta frecuencia requiere Premium (S/ 5.00).\n\nPremium te da control total:\n- 1/día (8:00)\n- 2/día (8:00, 17:00)\n- 3/día (8:00, 14:00, 20:00)\n- 4/día (8:00, 12:00, 17:00, 21:00)\n\nPróximamente disponible.");
         }
       });
       
@@ -679,11 +680,11 @@
           return false;
         }
         
-        // Submit to Netlify with weekly frequency
+        // Submit to Netlify with free plan (3 per week)
         const formData = new FormData();
         formData.append('form-name', 'subscribe');
         formData.append('email', email);
-        formData.append('frequency', '168'); // Weekly (24*7 hours)
+        formData.append('frequency', 'weekly-3'); // New free plan (3 per week L-M-V)
         
         fetch('/', {
           method: 'POST',
@@ -695,7 +696,7 @@
           
           content.innerHTML = `
             <h2 style="color: #059669;">¡Perfecto!</h2>
-            <p>Te hemos suscrito para recibir <strong>1 frase cada domingo</strong>.</p>
+            <p>Te hemos suscrito para recibir <strong>3 frases por semana</strong> (L-M-V a las 8:00 AM).</p>
             <p>Revisa tu email para confirmar.</p>
             <button onclick="closeExitModal()" class="exit-cta" style="background: #059669 !important;">
               Cerrar

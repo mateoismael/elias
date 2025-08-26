@@ -1,5 +1,12 @@
 """
 Database module for subscription management with Supabase
+UPDATED FOR 2025 DELIVERABILITY-SAFE FREEMIUM MODEL (Plan ID = Emails por día):
+- Plan 0: Free (56h = 3/semana L-M-V)
+- Plan 1: Premium 1/día (24h)
+- Plan 2: Premium 2/día (12h)
+- Plan 3: Premium 3/día (8h)
+- Plan 4: Premium 4/día (6h)
+- Plan 13: Premium Power User 13/día (1h = VIP/manual)
 """
 import os
 from typing import List, Dict, Optional
@@ -165,7 +172,7 @@ class SupabaseManager:
             return []
     
     def create_free_subscription(self, email: str) -> bool:
-        """Create free subscription for new user"""
+        """Create free subscription for new user (NEW 2025 MODEL)"""
         try:
             # Get or create user
             user = self.get_user_by_email(email)
@@ -175,10 +182,10 @@ class SupabaseManager:
             if not user:
                 return False
             
-            # Create free subscription (plan_id = 1 is free)
+            # Create free subscription (plan_id = 0 = 3/semana L-M-V deliverability-safe)
             response = self.supabase.table('subscriptions').insert({
                 'user_id': user.id,
-                'plan_id': 1,  # free plan
+                'plan_id': 0,  # Plan 0 = free plan (56h = 3/semana L-M-V)
                 'status': 'active'
             }).execute()
             

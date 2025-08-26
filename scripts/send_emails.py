@@ -81,11 +81,17 @@ NETLIFY_API = "https://api.netlify.com/api/v1"
 # =============================================================================
 
 class FrequencyEnum(IntEnum):
-    """Valid email frequencies in hours."""
-    HOURLY = 1
-    EVERY_3_HOURS = 3
-    EVERY_6_HOURS = 6
-    DAILY = 24
+    """Valid email frequencies - NEW 2025 MODEL (Plan ID = Emails por día)."""
+    HOURLY = 1  # Plan 13 - Power User (13/día, manual/VIP)
+    EVERY_6_HOURS = 6  # Plan 4 - Premium (4/día)
+    THREE_DAILY = 8  # Plan 3 - Premium (3/día)
+    TWICE_DAILY = 12  # Plan 2 - Premium (2/día)
+    DAILY = 24  # Plan 1 - Premium (1/día)
+    FREE_WEEKLY_3 = 56  # Plan 0 - Gratuito (3/semana L-M-V)
+    
+    # Deprecated values (mantener para compatibilidad)
+    EVERY_3_HOURS = 3  # Legacy
+    FLOW_STATE = 4  # Legacy
 
 
 @dataclass(frozen=True)
@@ -151,8 +157,8 @@ class Subscriber(BaseModel):
             except ValueError:
                 raise ValueError(f"Invalid frequency: {v}")
         
-        if v not in [1, 3, 6, 24]:
-            raise ValueError(f"Frequency must be 1, 3, 6, or 24, got: {v}")
+        if v not in [1, 6, 8, 12, 24, 56]:  # NEW 2025 MODEL values
+            raise ValueError(f"Frequency must be 1, 6, 8, 12, 24, or 56 (new model), got: {v}")
         
         return FrequencyEnum(v)
 
@@ -300,31 +306,78 @@ def current_hour_slot() -> int:
 
 def get_optimal_send_hours(frequency: int) -> List[int]:
     """
-    Return optimal sending hours in Peru time for each frequency.
-    Returns list of hours (0-23) in Peru timezone.
+    Return optimal sending hours for NEW 2025 MODEL (Deliverability-Safe).
+    Returns list of hours (0-23) in UTC.
+    
+    NUEVO MODELO (Plan ID = Emails por día):
+    - 56: Plan 0 - Gratuito (3/semana L-M-V, 8:00)
+    - 24: Plan 1 - Premium 1/día (8:00)
+    - 12: Plan 2 - Premium 2/día (8:00, 17:00)
+    - 8: Plan 3 - Premium 3/día (8:00, 14:00, 20:00)
+    - 6: Plan 4 - Premium 4/día (8:00, 12:00, 17:00, 21:00)
+    - 1: Plan 13 - Power User 13/día (cada hora 8:00-20:00)
     """
-    # Convert Peru time to UTC for comparison (Peru = UTC-5)
-    if frequency == 24:  # Daily
-        return [13]  # 8:00 AM Peru = 13:00 UTC
-    elif frequency == 6:  # Every 6 hours  
-        return [13, 19, 1]  # 8:00 AM, 2:00 PM, 8:00 PM Peru
-    elif frequency == 3:  # Every 3 hours
-        return [13, 16, 19, 22, 1, 4]  # 8:00 AM, 11:00 AM, 2:00 PM, 5:00 PM, 8:00 PM, 11:00 PM Peru
-    else:  # Every hour (frequency == 1) or any other frequency
-        # All hours from 5 AM to 11 PM Peru (10:00 to 4:00 UTC next day)
-        return list(range(10, 24)) + list(range(0, 5))  # 10-23 UTC + 0-4 UTC
+    # Convert Peru time to UTC (Peru = UTC-5)
+    
+    if frequency == 56:  # Plan gratuito (3 por semana L-M-V)
+        # Solo Lunes-Miércoles-Viernes a las 8:00 AM Peru = 13:00 UTC
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+        weekday = now_utc.weekday()  # 0=Monday, 1=Tuesday, 2=Wednesday, 6=Sunday
+        
+        if weekday in [0, 2, 4]:  # Monday, Wednesday, Friday
+            return [13]  # 8:00 AM Peru = 13:00 UTC
+        else:
+            return []  # No envíos otros días
+    
+    elif frequency == 24:  # Plan 1 - Premium 1/día
+        return [13]  # 8:00 Peru = 13:00 UTC
+    
+    elif frequency == 12:  # Plan 2 - Premium 2/día 
+        return [13, 22]  # 8:00, 17:00 Peru = 13:00, 22:00 UTC
+    
+    elif frequency == 8:  # Plan 3 - Premium 3/día
+        return [13, 19, 1]  # 8:00, 14:00, 20:00 Peru = 13:00, 19:00, 01:00 UTC
+    
+    elif frequency == 6:  # Plan 4 - Premium 4/día
+        return [13, 17, 22, 2]  # 8:00, 12:00, 17:00, 21:00 Peru = 13:00, 17:00, 22:00, 02:00 UTC
+    
+    elif frequency == 1:  # Plan 13 - Power User 13/día (manual/VIP)
+        # 8:00-20:00 Peru (13 horas) = 13:00-01:00 UTC (next day)  
+        return list(range(13, 24)) + list(range(0, 2))  # 13-23 UTC + 0-1 UTC (total: 13 horas)
+    
+    else:
+        # Default: plan gratuito para frecuencias no reconocidas
+        logger.warning("Unknown frequency in get_optimal_send_hours, defaulting to free plan", frequency=frequency)
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+        weekday = now_utc.weekday()
+        if weekday in [0, 2, 4]:  # L-M-V
+            return [13]
+        else:
+            return []
 
 
 def should_send_at_current_hour(frequency: int) -> bool:
     """
-    Check if email should be sent at current UTC hour based on frequency.
-    Uses optimized sending times instead of modulo operation.
+    Check if email should be sent at current UTC hour based on NEW 2025 MODEL.
+    Includes day-of-week logic for free plan (L-M-V only).
     """
     now = datetime.now(timezone.utc)
     current_utc_hour = now.hour
     
     optimal_hours = get_optimal_send_hours(frequency)
-    return current_utc_hour in optimal_hours
+    result = current_utc_hour in optimal_hours
+    
+    # Extra logging for debugging new model
+    if result:
+        logger.debug("Should send email", 
+                    frequency=frequency, 
+                    current_utc_hour=current_utc_hour,
+                    optimal_hours=optimal_hours,
+                    weekday=now.weekday())
+    
+    return result
 
 
 def is_sending_hours() -> bool:
@@ -452,19 +505,25 @@ def get_subscribers_from_supabase() -> List[Subscriber]:
         
         for sub_data in subscribers_data:
             try:
-                # Map frequency hours to FrequencyEnum
+                # Map frequency hours to FrequencyEnum (NEW 2025 MODEL - Plan ID = Emails por día)
                 frequency_hours = sub_data['frequency_hours']
-                if frequency_hours == 1:
-                    frequency = FrequencyEnum.HOURLY
-                elif frequency_hours == 3:
-                    frequency = FrequencyEnum.EVERY_3_HOURS
-                elif frequency_hours == 6:
-                    frequency = FrequencyEnum.EVERY_6_HOURS
-                elif frequency_hours == 24:
+                if frequency_hours == 56:  # Plan 0 - Gratuito (3/semana L-M-V)
+                    frequency = FrequencyEnum.FREE_WEEKLY_3
+                elif frequency_hours == 24:  # Plan 1 - Premium 1/día
                     frequency = FrequencyEnum.DAILY
+                elif frequency_hours == 12:  # Plan 2 - Premium 2/día
+                    frequency = FrequencyEnum.TWICE_DAILY
+                elif frequency_hours == 8:  # Plan 3 - Premium 3/día
+                    frequency = FrequencyEnum.THREE_DAILY
+                elif frequency_hours == 6:  # Plan 4 - Premium 4/día
+                    frequency = FrequencyEnum.EVERY_6_HOURS
+                elif frequency_hours == 1:  # Plan 13 - Power User (13/día manual/VIP)
+                    frequency = FrequencyEnum.HOURLY
                 else:
-                    logger.warning("Unknown frequency", email=sub_data['email'], frequency_hours=frequency_hours)
-                    frequency = FrequencyEnum.DAILY  # Default to daily
+                    logger.warning("Unknown frequency, defaulting to free plan", 
+                                  email=sub_data['email'], 
+                                  frequency_hours=frequency_hours)
+                    frequency = FrequencyEnum.FREE_WEEKLY_3  # Default to free plan
                 
                 subscriber = Subscriber(
                     email=sub_data['email'],

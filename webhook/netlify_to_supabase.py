@@ -172,30 +172,36 @@ def validate_netlify_webhook(data: Dict[str, Any]) -> bool:
     return True
 
 def map_frequency_to_plan_id(frequency: str) -> int:
-    """Mapear frecuencia a plan_id - Actualizado 2025"""
-    # MODELO ACTUALIZADO:
-    # Plan 1 = GRATUITO (3 horas, 8 frases/día) - S/ 0.00
-    # Plan 2 = PREMIUM 6h (6 horas, 4 frases/día) - S/ 5.00  
-    # Plan 3 = PREMIUM 24h (24 horas, 1 frase/día) - S/ 5.00
-    # Plan 4 = PREMIUM 1h (1 hora, 19 frases/día) - S/ 5.00
+    """Mapear frecuencia a plan_id - MODELO OPTIMIZADO 2025 (Deliverability-Safe)"""
+    # NUEVO MODELO 2025 (Plan ID = Emails por día):
+    # Plan 0 = GRATUITO (3/semana L-M-V) - S/ 0.00
+    # Plan 1 = PREMIUM 1/día (24h) - S/ 5.00
+    # Plan 2 = PREMIUM 2/día (12h) - S/ 5.00  
+    # Plan 3 = PREMIUM 3/día (8h) - S/ 5.00
+    # Plan 4 = PREMIUM 4/día (6h) - S/ 5.00
+    # Plan 13 = PREMIUM Power User 13/día (1h) - OCULTO/MANUAL
     
     frequency_str = str(frequency)
     
-    if frequency_str == '3':
-        plan_id = 1  # Plan gratuito (3h, 8 frases/día)
-    elif frequency_str == '6':
-        plan_id = 2  # Plan premium 6h (4 frases/día)
-    elif frequency_str == '24':
-        plan_id = 3  # Plan premium 24h (1 frase/día)
+    if frequency_str == 'weekly-3' or frequency_str == '56':
+        plan_id = 0  # Plan gratuito (3/semana L-M-V)
+    elif frequency_str == '1-daily' or frequency_str == '24':
+        plan_id = 1  # Premium 1/día
+    elif frequency_str == '2-daily' or frequency_str == '12':
+        plan_id = 2  # Premium 2/día
+    elif frequency_str == '3-daily' or frequency_str == '8':
+        plan_id = 3  # Premium 3/día
+    elif frequency_str == '4-daily' or frequency_str == '6':
+        plan_id = 4  # Premium 4/día
     elif frequency_str == '1':
-        plan_id = 4  # Plan premium 1h (19 frases/día)
+        plan_id = 13  # Premium Power User (13/día - solo manual/VIP)
     else:
         # Default a plan gratuito para frecuencias no reconocidas
-        plan_id = 1
+        plan_id = 0
         logger.warning("Unknown frequency, defaulting to free plan", frequency=frequency)
     
-    plan_type = "free" if plan_id == 1 else "premium"
-    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id, plan_type=plan_type)
+    plan_type = "free" if plan_id == 0 else "premium"
+    logger.info("Frequency mapping 2025", frequency=frequency, plan_id=plan_id, plan_type=plan_type)
     return plan_id
 
 @app.route('/webhook/netlify-form', methods=['POST', 'OPTIONS'])
@@ -234,11 +240,11 @@ def handle_netlify_form():
         
         # Extraer datos del formulario
         email = data.get('email', '').strip().lower()
-        frequency = data.get('frequency', '6')  # Default: 6 horas (3 frases/día)
+        frequency = data.get('frequency', 'weekly-3')  # Default: 3 por semana (plan gratuito)
         
-        # Solo permitir plan gratuito (6 horas) por ahora
-        if frequency != '6':
-            frequency = '6'  # Force free plan
+        # Solo permitir plan gratuito (3 por semana) por ahora desde landing page
+        if frequency not in ['weekly-3', '56']:
+            frequency = 'weekly-3'  # Force free plan (deliverability-safe)
         
         plan_id = map_frequency_to_plan_id(frequency)
         
