@@ -207,8 +207,8 @@
         <label for="frequency">Elige tu nueva frecuencia</label>
         <select id="frequency" name="frequency" required>
           <option value="1" disabled class="premium-option">Cada hora • 19 frases/día [Premium S/5]</option>
-          <option value="3" disabled class="premium-option">Cada 3 horas • 8 frases/día [Premium S/5]</option>
-          <option value="6" selected>Cada 6 horas • 3 frases/día (Gratis)</option>
+          <option value="3" selected>Cada 3 horas • 8 frases/día (Gratis)</option>
+          <option value="6" disabled class="premium-option">Cada 6 horas • 4 frases/día [Premium S/5]</option>
           <option value="24" disabled class="premium-option">Una vez al día • 1 frase/día [Premium S/5]</option>
         </select>
 
@@ -261,7 +261,7 @@
           const selectedOption = e.target.selectedOptions[0];
           if (selectedOption && selectedOption.disabled && selectedOption.classList.contains("premium-option")) {
             // Reset to free option
-            frequencySelect.value = "6";
+            frequencySelect.value = "3";
             
             // Show premium upgrade message
             showMessage("Esta frecuencia requiere Premium (S/ 5.00). Próximamente disponible.", "error");
@@ -372,8 +372,8 @@
         function getFrequencyText(freq) {
           const map = {
             1: "Cada hora (Premium S/5)",
-            3: "Cada 3 horas (Premium S/5)", 
-            6: "Cada 6 horas (Gratis)",
+            3: "Cada 3 horas (Gratis)", 
+            6: "Cada 6 horas (Premium S/5)",
             24: "Una vez al día (Premium S/5)",
           };
           return map[freq] || "Desconocido";

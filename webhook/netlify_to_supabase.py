@@ -172,18 +172,30 @@ def validate_netlify_webhook(data: Dict[str, Any]) -> bool:
     return True
 
 def map_frequency_to_plan_id(frequency: str) -> int:
-    """Mapear frecuencia a plan_id - Modelo Simplificado"""
-    # MODELO SIMPLIFICADO:
-    # Plan 1 = GRATUITO (6 horas, 3 frases/día) - S/ 0.00
-    # Plan 2 = PREMIUM (1h, 3h, 24h) - S/ 5.00
+    """Mapear frecuencia a plan_id - Actualizado 2025"""
+    # MODELO ACTUALIZADO:
+    # Plan 1 = GRATUITO (3 horas, 8 frases/día) - S/ 0.00
+    # Plan 2 = PREMIUM 6h (6 horas, 4 frases/día) - S/ 5.00  
+    # Plan 3 = PREMIUM 24h (24 horas, 1 frase/día) - S/ 5.00
+    # Plan 4 = PREMIUM 1h (1 hora, 19 frases/día) - S/ 5.00
     
-    if str(frequency) == '6':
-        plan_id = 1  # Plan gratuito
+    frequency_str = str(frequency)
+    
+    if frequency_str == '3':
+        plan_id = 1  # Plan gratuito (3h, 8 frases/día)
+    elif frequency_str == '6':
+        plan_id = 2  # Plan premium 6h (4 frases/día)
+    elif frequency_str == '24':
+        plan_id = 3  # Plan premium 24h (1 frase/día)
+    elif frequency_str == '1':
+        plan_id = 4  # Plan premium 1h (19 frases/día)
     else:
-        plan_id = 2  # Plan premium (cualquier otra frecuencia)
+        # Default a plan gratuito para frecuencias no reconocidas
+        plan_id = 1
+        logger.warning("Unknown frequency, defaulting to free plan", frequency=frequency)
     
-    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id, 
-               plan_type="free" if plan_id == 1 else "premium")
+    plan_type = "free" if plan_id == 1 else "premium"
+    logger.info("Frequency mapping", frequency=frequency, plan_id=plan_id, plan_type=plan_type)
     return plan_id
 
 @app.route('/webhook/netlify-form', methods=['POST', 'OPTIONS'])
