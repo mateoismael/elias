@@ -106,6 +106,45 @@
         }
       }
       
+      /* Google Sign-In Button Styling */
+      .google-signin-container {
+        margin: 16px 0;
+        text-align: center;
+      }
+      
+      .divider {
+        margin: 20px 0;
+        text-align: center;
+        position: relative;
+        color: #6b7280;
+        font-size: 0.875rem;
+      }
+      
+      .divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e5e7eb;
+      }
+      
+      .divider span {
+        background: #fff;
+        padding: 0 16px;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        .divider::before {
+          background: #374151;
+        }
+        
+        .divider span {
+          background: #111;
+        }
+      }
+      
       /* Reduce motion for users who prefer it */
       @media (prefers-reduced-motion: reduce) {
         * {
@@ -387,6 +426,8 @@
         }
       }
     </style>
+    <!-- Google Identity Services Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <main class="card">
@@ -413,6 +454,29 @@
       <p style="font-size: 0.9rem; opacity: 0.8;">
         Gratis - Sin spam - Cancela cuando quieras
       </p>
+
+      <!-- Google Sign-In Button -->
+      <div class="google-signin-container">
+        <div id="g_id_onload"
+             data-client_id="970302400473-3umkhr0fuhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+      </div>
+      
+      <div class="divider">
+        <span>o regístrate con email</span>
+      </div>
 
       <!-- Netlify Forms: nombre del formulario "subscribe" -->
       <form
@@ -809,6 +873,60 @@
           animateNumber(emailsSent, 85000, currentEmails, 2000);
         }, 500);
       });
+      
+      // Google Sign-In Handler
+      function handleGoogleSignIn(response) {
+        console.log('Google Sign-In successful:', response);
+        
+        // Show loading state
+        const googleContainer = document.querySelector('.google-signin-container');
+        const originalContent = googleContainer.innerHTML;
+        googleContainer.innerHTML = '<p>Procesando con Google...</p>';
+        
+        // Send credential to webhook
+        fetch('/webhook/google-signin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            credential: response.credential,
+            frequency: 'weekly-3' // Default to free plan
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Redirect to success page
+            window.location.href = '/success.html?source=google';
+          } else {
+            throw new Error(data.error || 'Authentication failed');
+          }
+        })
+        .catch(error => {
+          console.error('Google Sign-In error:', error);
+          alert('Error al registrarse con Google. Por favor intenta con email.');
+          googleContainer.innerHTML = originalContent;
+        });
+      }
+      
+      // Initialize Google Sign-In when page loads
+      window.onload = function() {
+        if (typeof google !== 'undefined' && google.accounts) {
+          google.accounts.id.initialize({
+            client_id: '970302400473-3umkhr0fuhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com',
+            callback: handleGoogleSignIn,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+          
+          google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              console.log('Google One Tap not shown:', notification.getNotDisplayedReason());
+            }
+          });
+        }
+      };
     </script>
   </body>
 </html>

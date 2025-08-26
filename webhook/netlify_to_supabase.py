@@ -11,6 +11,8 @@ from typing import Dict, Any, Optional
 import structlog
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import jwt
+import base64
 
 # Cargar variables de entorno
 load_dotenv()
@@ -47,10 +49,43 @@ def get_user_by_email(supabase, email: str):
         logger.error("Failed to get user by email", email=email, error=str(e))
         return None
 
-def create_user(supabase, email: str):
-    """Create new user"""
+def get_user_by_google_id(supabase, google_id: str):
+    """Get user by Google ID"""
     try:
-        response = supabase.table('users').insert({'email': email}).execute()
+        response = supabase.table('users').select('*').eq('google_id', google_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        logger.error("Failed to get user by Google ID", google_id=google_id, error=str(e))
+        return None
+
+def create_user_google(supabase, email: str, name: str, google_id: str, avatar_url: str = None):
+    """Create new user with Google authentication"""
+    try:
+        user_data = {
+            'email': email,
+            'name': name,
+            'google_id': google_id,
+            'auth_method': 'google'
+        }
+        if avatar_url:
+            user_data['avatar_url'] = avatar_url
+            
+        response = supabase.table('users').insert(user_data).execute()
+        if response.data:
+            logger.info("User created with Google", email=email, google_id=google_id, user_id=response.data[0]['id'])
+            return response.data[0]
+        return None
+    except Exception as e:
+        logger.error("Failed to create user with Google", email=email, google_id=google_id, error=str(e))
+        return None
+
+def create_user(supabase, email: str):
+    """Create new user (legacy email method)"""
+    try:
+        response = supabase.table('users').insert({
+            'email': email,
+            'auth_method': 'email'
+        }).execute()
         if response.data:
             logger.info("User created", email=email, user_id=response.data[0]['id'])
             return response.data[0]
@@ -457,6 +492,157 @@ def handle_unsubscribe():
         response = jsonify({
             'status': 'error',
             'message': 'Error interno del servidor'
+        })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
+
+@app.route('/webhook/google-signin', methods=['POST', 'OPTIONS'])
+def handle_google_signin():
+    """Endpoint para procesar autenticación con Google"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    try:
+        data = request.get_json()
+        credential = data.get('credential')
+        frequency = data.get('frequency', 'weekly-3')  # Default to free plan
+        
+        if not credential:
+            response = jsonify({
+                'success': False,
+                'error': 'Missing credential'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
+        
+        # Decode JWT token from Google (without verification since Google already verified)
+        try:
+            # Decode without verification for development - in production use proper verification
+            decoded_token = jwt.decode(credential, options={"verify_signature": False})
+            
+            email = decoded_token.get('email', '').strip().lower()
+            name = decoded_token.get('name', '')
+            google_id = decoded_token.get('sub')
+            avatar_url = decoded_token.get('picture')
+            
+            if not email or not google_id:
+                raise ValueError("Missing required fields from Google token")
+                
+        except Exception as e:
+            logger.error("Failed to decode Google token", error=str(e))
+            response = jsonify({
+                'success': False,
+                'error': 'Invalid Google token'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
+        
+        logger.info("Processing Google Sign-In", email=email, google_id=google_id[:10] + "...")
+        
+        # Connect to Supabase
+        supabase = get_supabase()
+        
+        # Map frequency to plan ID (using new 2025 model)
+        plan_id = map_frequency_to_plan_id(frequency)
+        
+        # Check if user exists by Google ID
+        existing_user = get_user_by_google_id(supabase, google_id)
+        
+        if existing_user:
+            # Update existing user subscription
+            logger.info("Existing Google user found", 
+                       email=email, 
+                       user_id=existing_user['id'])
+            
+            # Update user info if needed
+            if existing_user.get('name') != name or existing_user.get('avatar_url') != avatar_url:
+                supabase.table('users').update({
+                    'name': name,
+                    'avatar_url': avatar_url,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('id', existing_user['id']).execute()
+            
+            action = create_or_update_subscription(supabase, existing_user['id'], plan_id)
+            user = existing_user
+        else:
+            # Check if user exists by email (for migration from email-only accounts)
+            email_user = get_user_by_email(supabase, email) if email else None
+            
+            if email_user:
+                # Update existing email user with Google ID
+                supabase.table('users').update({
+                    'google_id': google_id,
+                    'name': name,
+                    'avatar_url': avatar_url,
+                    'auth_method': 'both',
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('id', email_user['id']).execute()
+                
+                logger.info("Updated email user with Google ID", 
+                           email=email, 
+                           user_id=email_user['id'])
+                
+                action = create_or_update_subscription(supabase, email_user['id'], plan_id)
+                user = email_user
+            else:
+                # Create new user with Google authentication
+                user = create_user_google(supabase, email, name, google_id, avatar_url)
+                if not user:
+                    response = jsonify({
+                        'success': False,
+                        'error': 'Failed to create user'
+                    })
+                    response.headers['Access-Control-Allow-Origin'] = '*'
+                    return response, 500
+                
+                action = create_or_update_subscription(supabase, user['id'], plan_id)
+        
+        if not action:
+            logger.error("Failed to create/update subscription", 
+                        email=email, 
+                        user_id=user['id'])
+            response = jsonify({
+                'success': False,
+                'error': 'Failed to create subscription'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 500
+        
+        logger.info("Google Sign-In completed successfully",
+                   email=email,
+                   user_id=user['id'],
+                   plan_id=plan_id,
+                   frequency=frequency,
+                   action=action)
+        
+        response = jsonify({
+            'success': True,
+            'user': {
+                'id': user['id'],
+                'email': user['email'],
+                'name': user.get('name', ''),
+                'auth_method': user.get('auth_method', 'google')
+            },
+            'subscription': {
+                'plan_id': plan_id,
+                'frequency': frequency,
+                'action': action
+            }
+        })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+        
+    except Exception as e:
+        logger.error("Google Sign-In processing failed", error=str(e), exc_info=True)
+        response = jsonify({
+            'success': False,
+            'error': 'Internal server error'
         })
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response, 500

@@ -22,6 +22,10 @@ class User:
     id: str
     email: str
     created_at: datetime
+    name: Optional[str] = None
+    google_id: Optional[str] = None
+    avatar_url: Optional[str] = None
+    auth_method: Optional[str] = None
 
 @dataclass 
 class SubscriptionPlan:
@@ -67,7 +71,11 @@ class SupabaseManager:
                 return User(
                     id=data['id'],
                     email=data['email'],
-                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
+                    name=data.get('name'),
+                    google_id=data.get('google_id'),
+                    avatar_url=data.get('avatar_url'),
+                    auth_method=data.get('auth_method')
                 )
             return None
             
@@ -75,11 +83,34 @@ class SupabaseManager:
             logger.error("Failed to get user by email", email=email, error=str(e))
             return None
     
+    def get_user_by_google_id(self, google_id: str) -> Optional[User]:
+        """Get user by Google ID"""
+        try:
+            response = self.supabase.table('users').select('*').eq('google_id', google_id).execute()
+            
+            if response.data:
+                data = response.data[0]
+                return User(
+                    id=data['id'],
+                    email=data['email'],
+                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
+                    name=data.get('name'),
+                    google_id=data.get('google_id'),
+                    avatar_url=data.get('avatar_url'),
+                    auth_method=data.get('auth_method')
+                )
+            return None
+            
+        except Exception as e:
+            logger.error("Failed to get user by Google ID", google_id=google_id, error=str(e))
+            return None
+    
     def create_user(self, email: str) -> Optional[User]:
-        """Create new user"""
+        """Create new user (legacy email method)"""
         try:
             response = self.supabase.table('users').insert({
-                'email': email
+                'email': email,
+                'auth_method': 'email'
             }).execute()
             
             if response.data:
@@ -88,12 +119,48 @@ class SupabaseManager:
                 return User(
                     id=data['id'],
                     email=data['email'],
-                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
+                    name=data.get('name'),
+                    google_id=data.get('google_id'),
+                    avatar_url=data.get('avatar_url'),
+                    auth_method=data.get('auth_method')
                 )
             return None
             
         except Exception as e:
             logger.error("Failed to create user", email=email, error=str(e))
+            return None
+    
+    def create_user_google(self, email: str, name: str, google_id: str, avatar_url: str = None) -> Optional[User]:
+        """Create new user with Google authentication"""
+        try:
+            user_data = {
+                'email': email,
+                'name': name,
+                'google_id': google_id,
+                'auth_method': 'google'
+            }
+            if avatar_url:
+                user_data['avatar_url'] = avatar_url
+                
+            response = self.supabase.table('users').insert(user_data).execute()
+            
+            if response.data:
+                data = response.data[0]
+                logger.info("User created with Google", email=email, google_id=google_id, user_id=data['id'])
+                return User(
+                    id=data['id'],
+                    email=data['email'],
+                    created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
+                    name=data.get('name'),
+                    google_id=data.get('google_id'),
+                    avatar_url=data.get('avatar_url'),
+                    auth_method=data.get('auth_method')
+                )
+            return None
+            
+        except Exception as e:
+            logger.error("Failed to create user with Google", email=email, google_id=google_id, error=str(e))
             return None
     
     def get_user_subscription(self, email: str) -> Optional[Subscription]:
