@@ -884,7 +884,7 @@
         googleContainer.innerHTML = '<p>Procesando con Google...</p>';
         
         // Send credential to webhook
-        fetch('/webhook/google-signin', {
+        fetch('https://webhook-blush-five.vercel.app/webhook/google-signin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
