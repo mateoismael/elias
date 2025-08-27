@@ -257,44 +257,8 @@ def validate_unsubscribe_token(email: str, token: str) -> bool:
         return False
 
 
-def load_phrases(csv_path: str) -> List[Phrase]:
-    """Load and validate phrases from CSV file."""
-    try:
-        with open(csv_path, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            phrases = []
-            for i, row in enumerate(reader, 1):
-                if row.get('text'):
-                    try:
-                        phrase = Phrase(
-                            id=row.get('id', f'P{i}'),
-                            text=row['text'],
-                            author=row['author']  # Sin default - debe existir
-                        )
-                        phrases.append(phrase)
-                    except Exception as e:
-                        logger.warning("Invalid phrase in CSV", row=i, error=str(e))
-                        continue
-        
-        if not phrases:
-            raise ValueError("No valid phrases found in CSV file")
-        
-        logger.info("Phrases loaded successfully", count=len(phrases), file=csv_path)
-        return phrases
-        
-    except FileNotFoundError:
-        logger.error("Phrases CSV file not found", file=csv_path)
-        raise
-    except Exception as e:
-        logger.error("Failed to load phrases", file=csv_path, error=str(e))
-        raise
-
-
-def load_phrases_legacy(csv_path: str) -> List[Dict[str, str]]:
-    """Load phrases for legacy compatibility - returns dict format."""
-    phrases = load_phrases(csv_path)
-    # Convert Phrase objects back to dict format for legacy compatibility
-    return [{'id': p.id, 'text': p.text, 'author': p.author} for p in phrases]
+# CSV loading functions removed - now using Supabase only
+# See scripts/database_phrases.py for phrase loading functions
 
 
 def current_hour_slot() -> int:
@@ -817,9 +781,26 @@ def main_modernized(argv: List[str]) -> int:
             email_config = None
         netlify_config = NetlifyConfig.from_env()
         
-        # Load and select phrase
-        csv_path = os.getenv('PHRASES_CSV', 'frases_pilot_autores.csv')
-        phrases = load_phrases(csv_path)
+        # Load and select phrase from Supabase
+        try:
+            from database_phrases import get_random_phrase
+            phrase_data = get_random_phrase()
+            if phrase_data:
+                phrase = Phrase(
+                    id=phrase_data['id'],
+                    text=phrase_data['text'],
+                    author=phrase_data['author']
+                )
+                phrases = [phrase]  # Single phrase format for compatibility
+            else:
+                logger.error("No phrases found in Supabase database")
+                return
+        except ImportError as e:
+            logger.error("Database module not available", error=str(e))
+            return
+        except Exception as e:
+            logger.error("Error loading phrase from database", error=str(e))
+            return
         
         # Choose pseudo-random phrase per hour (deterministic within the hour)
         slot = current_hour_slot()
@@ -1215,13 +1196,25 @@ def main(argv: List[str]) -> int:
         return 0
 
     # Config
-    csv_path = os.getenv('PHRASES_CSV', 'frases_pilot_autores.csv')
     form_name = os.getenv('NETLIFY_FORM_NAME', 'subscribe')
     site_id = os.getenv('NETLIFY_SITE_ID', '')
     token = os.getenv('NETLIFY_ACCESS_TOKEN', '')
     sender = os.getenv('SENDER_EMAIL', 'Frases <no-reply@example.com>')
 
-    phrases = load_phrases_legacy(csv_path)
+    # Load phrases from Supabase
+    try:
+        from database_phrases import load_phrases as load_phrases_from_db
+        phrases = load_phrases_from_db()  # Load from Supabase
+        if not phrases:
+            logger.error("No phrases found in Supabase database")
+            return
+    except ImportError as e:
+        logger.error("Database module not available", error=str(e))
+        return
+    except Exception as e:
+        logger.error("Error loading phrases from database", error=str(e))
+        return
+        
     # Choose a pseudo-random phrase per hour (deterministic within the hour)
     slot = current_hour_slot()
     seed_bytes = hashlib.sha256(f"{slot}:{len(phrases)}".encode('utf-8')).digest()

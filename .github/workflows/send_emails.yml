@@ -27,7 +27,6 @@ jobs:
 
       - name: Dry-run (log phrase and subscribers count)
         env:
-          PHRASES_CSV: frases_pilot_autores.csv
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -39,7 +38,6 @@ jobs:
       - name: Send emails via Resend
         if: ${{ success() }}
         env:
-          PHRASES_CSV: frases_pilot_autores.csv
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
