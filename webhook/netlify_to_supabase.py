@@ -29,6 +29,16 @@ logger = structlog.get_logger()
 
 app = Flask(__name__)
 
+# Global CORS configuration
+@app.after_request
+def after_request(response):
+    """Add CORS headers to all responses"""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    return response
+
 # Initialize Supabase client
 def get_supabase():
     """Get Supabase client"""
@@ -423,7 +433,8 @@ def handle_unsubscribe():
         response = jsonify({'status': 'ok'})
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Max-Age'] = '3600'
         return response
     
     try:
@@ -436,20 +447,16 @@ def handle_unsubscribe():
         email = data.get('email', '').strip().lower()
         
         if not email:
-            response = jsonify({
+            return jsonify({
                 'status': 'error',
                 'message': 'Email requerido'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 400
+            }), 400
         
         if '@' not in email:
-            response = jsonify({
+            return jsonify({
                 'status': 'error',
                 'message': 'Email inválido'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 400
+            }), 400
         
         logger.info("Processing unsubscribe request", email=email)
         
@@ -459,42 +466,34 @@ def handle_unsubscribe():
         # Verificar si el usuario existe
         user = get_user_by_email(supabase, email)
         if not user:
-            response = jsonify({
+            return jsonify({
                 'status': 'error',
                 'message': 'Email no encontrado en nuestro sistema'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 404
+            }), 404
         
         # Cancelar todas las suscripciones activas
         cancelled = cancel_existing_subscriptions(supabase, user['id'])
         
         if cancelled:
             logger.info("Subscription cancelled successfully", email=email, user_id=user['id'])
-            response = jsonify({
+            return jsonify({
                 'status': 'success',
                 'message': 'Suscripción cancelada exitosamente',
                 'email': email
             })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response
         else:
             logger.warning("Failed to cancel subscription", email=email, user_id=user['id'])
-            response = jsonify({
+            return jsonify({
                 'status': 'error',
                 'message': 'Error al cancelar la suscripción'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 500
+            }), 500
             
     except Exception as e:
         logger.error("Unsubscribe processing failed", error=str(e), exc_info=True)
-        response = jsonify({
+        return jsonify({
             'status': 'error',
             'message': 'Error interno del servidor'
-        })
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response, 500
+        }), 500
 
 @app.route('/webhook/google-signin', methods=['POST', 'OPTIONS'])
 def handle_google_signin():

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(gh workflow:*)",
       "Bash(gh run list:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(claude config list)",
+      "Bash(claude config get model)"
     ],
     "deny": [],
     "ask": []
