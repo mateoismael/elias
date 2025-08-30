@@ -521,24 +521,42 @@ def handle_google_signin():
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response, 400
         
-        # Decode JWT token from Google (without verification since Google already verified)
+        # Verify JWT token from Google using Google's official method
         try:
-            # Decode without verification for development - in production use proper verification
-            decoded_token = jwt.decode(credential, options={"verify_signature": False})
+            from google.oauth2 import id_token
+            from google.auth.transport import requests
             
-            email = decoded_token.get('email', '').strip().lower()
-            name = decoded_token.get('name', '')
-            google_id = decoded_token.get('sub')
-            avatar_url = decoded_token.get('picture')
+            # Your Google client ID
+            CLIENT_ID = "970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com"
+            
+            # Verify the token with Google's official verification
+            idinfo = id_token.verify_oauth2_token(credential, requests.Request(), CLIENT_ID)
+            
+            # Verify the issuer
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+            
+            # Extract verified user information
+            email = idinfo.get('email', '').strip().lower()
+            name = idinfo.get('name', '')
+            google_id = idinfo.get('sub')
+            avatar_url = idinfo.get('picture')
+            
+            logger.info("Verified Google token successfully", 
+                       email=email, 
+                       has_name=bool(name),
+                       has_google_id=bool(google_id))
             
             if not email or not google_id:
-                raise ValueError("Missing required fields from Google token")
+                raise ValueError(f"Missing required fields: email={bool(email)}, google_id={bool(google_id)}")
                 
         except Exception as e:
-            logger.error("Failed to decode Google token", error=str(e))
+            logger.error("Failed to verify Google token", 
+                        error=str(e), 
+                        credential_length=len(credential) if credential else 0)
             response = jsonify({
                 'success': False,
-                'error': 'Invalid Google token'
+                'error': f'Invalid Google token: {str(e)}'
             })
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response, 400

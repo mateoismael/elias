@@ -910,7 +910,7 @@
         });
       }
       
-      // Initialize Google Sign-In when page loads
+      // Initialize Google Sign-In when page loads (August 2025 compatible)
       window.onload = function() {
         if (typeof google !== 'undefined' && google.accounts) {
           google.accounts.id.initialize({
@@ -918,11 +918,13 @@
             callback: handleGoogleSignIn,
             auto_select: false,
             cancel_on_tap_outside: true
+            // Note: FedCM is now mandatory in August 2025, no need for use_fedcm_for_prompt
           });
           
+          // Show One Tap prompt
           google.accounts.id.prompt((notification) => {
             if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              console.log('Google One Tap not shown:', notification.getNotDisplayedReason());
+              console.log('Google One Tap not shown:', notification.getNotDisplayedReason() || 'User action required');
             }
           });
         }
