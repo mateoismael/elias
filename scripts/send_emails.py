@@ -638,6 +638,59 @@ class EmailSendError(Exception):
         self.status_code = status_code
 
 
+def update_user_email_stats(user_email: str) -> None:
+    """Update email statistics for user after successful email send"""
+    if get_db is None:
+        logger.warning("Database module not available for stats update")
+        return
+    
+    try:
+        from supabase import create_client, Client
+        import os
+        from datetime import datetime, timezone
+        
+        # Connect directly to Supabase
+        url = os.getenv('SUPABASE_URL')
+        key = os.getenv('SUPABASE_KEY')
+        
+        if not url or not key:
+            logger.warning("Supabase credentials not available for stats update")
+            return
+            
+        supabase = create_client(url, key)
+        now = datetime.now(timezone.utc)
+        
+        # Get current user stats
+        user_result = supabase.table('users').select('id, total_emails_sent').eq('email', user_email).execute()
+        
+        if not user_result.data:
+            logger.warning("User not found for email stats update", email=user_email)
+            return
+        
+        user = user_result.data[0]
+        new_count = (user.get('total_emails_sent') or 0) + 1
+        
+        # Update user statistics
+        update_result = supabase.table('users').update({
+            'total_emails_sent': new_count,
+            'last_email_sent_at': now.isoformat(),
+            'updated_at': now.isoformat()
+        }).eq('id', user['id']).execute()
+        
+        if update_result.data:
+            logger.debug("User email stats updated", 
+                        email=user_email,
+                        total_emails_sent=new_count,
+                        timestamp=now.isoformat())
+        
+    except Exception as e:
+        # Don't fail the email send if stats update fails
+        logger.error("Failed to update user email stats", 
+                    email=user_email, 
+                    error=str(e))
+        raise  # Re-raise to be caught by calling function
+
+
 def send_single_email(config: EmailConfig, content: EmailContent) -> None:
     """Send a single email with proper error handling and retries."""
     if resend is None:
@@ -674,6 +727,15 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
     while attempts <= config.max_retries:
         try:
             resend.Emails.send(email_data)
+            
+            # Update user email statistics in Supabase
+            try:
+                update_user_email_stats(content.recipient.email)
+            except Exception as stats_error:
+                logger.warning("Failed to update email stats, but email was sent", 
+                             recipient=content.recipient.email,
+                             error=str(stats_error))
+            
             logger.info("Email sent successfully", 
                        recipient=content.recipient.email,
                        subject=content.subject,

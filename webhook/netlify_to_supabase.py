@@ -474,7 +474,7 @@ def get_user_subscription():
         # Conectar a Supabase
         supabase = get_supabase()
         
-        # Obtener usuario
+        # Obtener usuario con estadísticas de email
         user = get_user_by_email(supabase, email)
         if not user:
             response = jsonify({
@@ -496,6 +496,11 @@ def get_user_subscription():
             response_data = {
                 'success': True,
                 'user_id': user['id'],
+                'user_stats': {
+                    'total_emails_sent': user.get('total_emails_sent', 0),
+                    'last_email_sent_at': user.get('last_email_sent_at'),
+                    'member_since': user.get('created_at')
+                },
                 'subscription': {
                     'id': subscription['id'],
                     'plan_id': subscription['plan_id'],
@@ -517,6 +522,11 @@ def get_user_subscription():
             response_data = {
                 'success': True,
                 'user_id': user['id'],
+                'user_stats': {
+                    'total_emails_sent': user.get('total_emails_sent', 0),
+                    'last_email_sent_at': user.get('last_email_sent_at'),
+                    'member_since': user.get('created_at')
+                },
                 'subscription': None,
                 'plan_id': 0
             }

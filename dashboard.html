@@ -510,9 +510,10 @@
                 // Load user statistics
                 await Promise.all([
                     loadUserStats(),
-                    loadUserSubscription(),
-                    loadRecentActivity()
+                    loadUserSubscription()
                 ]);
+                
+                // Load recent activity with real data (will be called after subscription loads)
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 showError('Error cargando datos del dashboard');
@@ -521,18 +522,8 @@
         
         async function loadUserStats() {
             try {
-                // For now, we'll simulate the stats
-                // In a real implementation, this would call an API endpoint
-                const totalPhrases = Math.floor(Math.random() * 100) + 20;
-                const monthProgress = Math.min((totalPhrases / 30) * 100, 100);
-                
-                document.getElementById('totalPhrases').textContent = totalPhrases;
-                document.getElementById('progressFill').style.width = monthProgress + '%';
-                
-                // Calculate member since date (simulate)
-                const memberSince = new Date();
-                memberSince.setMonth(memberSince.getMonth() - Math.floor(Math.random() * 6));
-                document.getElementById('memberSince').textContent = memberSince.toLocaleDateString('es-ES');
+                // This will be loaded from loadUserSubscription which includes stats
+                // Keep this function for now but stats will come from the subscription API
                 
             } catch (error) {
                 console.error('Error loading user stats:', error);
@@ -555,14 +546,45 @@
                 if (response.ok) {
                     const data = await response.json();
                     updateSubscriptionUI(data);
+                    updateUserStatsUI(data.user_stats);
+                    loadRecentActivity(data.user_stats, data);
                 } else {
                     // Default to free plan
-                    updateSubscriptionUI({ plan_id: 0 });
+                    const defaultData = { plan_id: 0 };
+                    const defaultStats = { total_emails_sent: 0, last_email_sent_at: null, member_since: null };
+                    updateSubscriptionUI(defaultData);
+                    updateUserStatsUI(defaultStats);
+                    loadRecentActivity(defaultStats, defaultData);
                 }
             } catch (error) {
                 console.error('Error loading subscription:', error);
-                updateSubscriptionUI({ plan_id: 0 });
+                const defaultData = { plan_id: 0 };
+                const defaultStats = { total_emails_sent: 0, last_email_sent_at: null, member_since: null };
+                updateSubscriptionUI(defaultData);
+                updateUserStatsUI(defaultStats);
+                loadRecentActivity(defaultStats, defaultData);
             }
+        }
+        
+        function updateUserStatsUI(userStats) {
+            if (!userStats) return;
+            
+            // Update total phrases count
+            const totalPhrases = userStats.total_emails_sent || 0;
+            document.getElementById('totalPhrases').textContent = totalPhrases;
+            
+            // Calculate progress (let's say 30 phrases per month as a goal)
+            const monthlyGoal = 30;
+            const progressPercent = Math.min((totalPhrases % monthlyGoal) / monthlyGoal * 100, 100);
+            document.getElementById('progressFill').style.width = progressPercent + '%';
+            
+            // Update member since date
+            if (userStats.member_since) {
+                const memberDate = new Date(userStats.member_since);
+                document.getElementById('memberSince').textContent = memberDate.toLocaleDateString('es-ES');
+            }
+            
+            // Don't update next phrase here - it will be updated by subscription data
         }
         
         function updateSubscriptionUI(subscriptionData) {
@@ -607,15 +629,49 @@
             userSubscription = subscriptionData;
         }
         
-        async function loadRecentActivity() {
+        function loadRecentActivity(userStats, subscriptionData) {
             try {
-                // Simulate recent activity
-                const activities = [
-                    { icon: '💭', text: 'Frase motivacional enviada', time: 'Hoy 8:00' },
-                    { icon: '📧', text: 'Frase motivacional enviada', time: 'Ayer 8:00' },
-                    { icon: '💰', text: 'Último pago procesado', time: 'Hace 5 días' },
-                    { icon: '✨', text: 'Te uniste a Pseudosapiens', time: 'Hace 2 semanas' }
-                ];
+                const activities = [];
+                
+                // Add last email sent activity if available
+                if (userStats && userStats.last_email_sent_at) {
+                    const lastSent = new Date(userStats.last_email_sent_at);
+                    const timeAgo = getTimeAgo(lastSent);
+                    activities.push({
+                        icon: '💭',
+                        text: 'Frase motivacional enviada',
+                        time: timeAgo
+                    });
+                }
+                
+                // Add subscription activity if premium
+                if (subscriptionData && subscriptionData.plan_id > 0) {
+                    activities.push({
+                        icon: '⭐',
+                        text: 'Upgrade a Premium',
+                        time: 'Reciente'
+                    });
+                }
+                
+                // Add member since activity
+                if (userStats && userStats.member_since) {
+                    const memberDate = new Date(userStats.member_since);
+                    const timeAgo = getTimeAgo(memberDate);
+                    activities.push({
+                        icon: '✨',
+                        text: 'Te uniste a Pseudosapiens',
+                        time: timeAgo
+                    });
+                }
+                
+                // If no activities, show default
+                if (activities.length === 0) {
+                    activities.push({
+                        icon: '🎯',
+                        text: 'Dashboard configurado',
+                        time: 'Ahora'
+                    });
+                }
                 
                 const activityList = document.getElementById('recentActivity');
                 activityList.innerHTML = activities.map(activity => `
@@ -630,6 +686,36 @@
                 
             } catch (error) {
                 console.error('Error loading recent activity:', error);
+                // Fallback to simple message
+                document.getElementById('recentActivity').innerHTML = `
+                    <li class="activity-item">
+                        <div class="activity-icon">📊</div>
+                        <div class="activity-content">
+                            <p class="activity-text">Dashboard cargado</p>
+                            <span class="activity-time">Ahora</span>
+                        </div>
+                    </li>
+                `;
+            }
+        }
+        
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return 'Hoy';
+            } else if (diffDays === 1) {
+                return 'Ayer';
+            } else if (diffDays < 7) {
+                return `Hace ${diffDays} días`;
+            } else if (diffDays < 30) {
+                const weeks = Math.floor(diffDays / 7);
+                return `Hace ${weeks} semana${weeks > 1 ? 's' : ''}`;
+            } else {
+                const months = Math.floor(diffDays / 30);
+                return `Hace ${months} mes${months > 1 ? 'es' : ''}`;
             }
         }
         
