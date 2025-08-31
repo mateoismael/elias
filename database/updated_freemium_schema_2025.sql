@@ -72,6 +72,52 @@ JOIN subscription_plans sp ON s.plan_id = sp.id
 WHERE s.status = 'active'
 ORDER BY u.email;
 
+-- AGREGAR CAMPOS PARA MERCADOPAGO INTEGRATION
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'mercadopago';
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS yape_phone VARCHAR(15);
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_preference_id VARCHAR(100);
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_type_id VARCHAR(50);
+
+-- Índices adicionales para performance
+CREATE INDEX IF NOT EXISTS idx_payments_method ON payments(payment_method);
+CREATE INDEX IF NOT EXISTS idx_payments_preference ON payments(payment_preference_id);
+CREATE INDEX IF NOT EXISTS idx_payments_mercadopago_id ON payments(mercadopago_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date DESC);
+
+-- Agregar webhook secret para validación MercadoPago
+CREATE TABLE IF NOT EXISTS webhook_secrets (
+    id SERIAL PRIMARY KEY,
+    service VARCHAR(50) NOT NULL,
+    secret_key TEXT NOT NULL,
+    environment VARCHAR(20) DEFAULT 'production',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(service, environment)
+);
+
+-- Insertar secreto placeholder para MercadoPago
+INSERT INTO webhook_secrets (service, secret_key, environment) VALUES
+('mercadopago', 'placeholder_secret_key', 'sandbox'),
+('mercadopago', 'placeholder_secret_key', 'production')
+ON CONFLICT (service, environment) DO NOTHING;
+
+-- Agregar tabla de logs para auditoría de pagos
+CREATE TABLE IF NOT EXISTS payment_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    payment_id UUID REFERENCES payments(id),
+    mercadopago_payment_id VARCHAR(100),
+    event_type VARCHAR(50) NOT NULL, -- webhook_received, payment_processed, error, etc.
+    event_data JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_logs_payment_id ON payment_logs(payment_id);
+CREATE INDEX IF NOT EXISTS idx_payment_logs_event_type ON payment_logs(event_type);
+CREATE INDEX IF NOT EXISTS idx_payment_logs_created_at ON payment_logs(created_at DESC);
+
 -- COMENTARIOS IMPORTANTES:
 -- NUEVA ESTRUCTURA: Plan ID = Emails por día
 -- Plan 0 (Free): 3/semana (L-M-V), frequency_hours = 56
@@ -79,3 +125,4 @@ ORDER BY u.email;
 -- Plan 13 (Power User): 13/día, is_active = false (oculto, solo asignación manual)
 -- Todos los premium cuestan S/5.00 (modelo simplificado)
 -- Horarios optimizados para Peru timezone (UTC-5)
+-- MERCADOPAGO: Tabla payments extendida con campos para Yape y tracking completo
