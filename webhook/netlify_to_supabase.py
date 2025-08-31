@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 import jwt
 import base64
 import mercadopago
+import requests
 import hashlib
 import hmac
 
@@ -710,7 +711,6 @@ def create_subscription_plan(mp_sdk, plan_details):
         }
         
         # Usar API directa porque el SDK Python no soporta subscriptions aún
-        import requests
         
         headers = {
             "Content-Type": "application/json",
@@ -868,123 +868,6 @@ def create_premium_subscription():
             
     except Exception as e:
         logger.error("Monthly subscription creation failed", error=str(e), exc_info=True)
-        response = jsonify({
-            'success': False,
-            'error': 'Error interno del servidor'
-        })
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response, 500
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return response
-    
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        plan_id = data.get('plan_id', 1)  # Default premium plan
-        
-        if not email or '@' not in email:
-            response = jsonify({
-                'success': False,
-                'error': 'Email válido requerido'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 400
-        
-        logger.info("Creating premium payment", email=email, plan_id=plan_id)
-        
-        # Conectar a Supabase para verificar usuario
-        supabase = get_supabase()
-        user = get_user_by_email(supabase, email)
-        
-        if not user:
-            # Crear usuario si no existe
-            user = create_user(supabase, email)
-            if not user:
-                response = jsonify({
-                    'success': False,
-                    'error': 'Error creating user'
-                })
-                response.headers['Access-Control-Allow-Origin'] = '*'
-                return response, 500
-        
-        # Obtener detalles del plan
-        plan_response = supabase.table('subscription_plans').select('*').eq('id', plan_id).execute()
-        if not plan_response.data:
-            response = jsonify({
-                'success': False,
-                'error': 'Plan no encontrado'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 404
-        
-        plan = plan_response.data[0]
-        
-        # Inicializar MercadoPago SDK
-        mp_sdk = get_mercadopago_sdk()
-        
-        # Crear preferencia de pago
-        preference_data = {
-            "items": [{
-                "title": f"Pseudosapiens {plan['display_name']}",
-                "description": f"Suscripción {plan['description']}",
-                "quantity": 1,
-                "unit_price": float(plan['price_soles']),
-                "currency_id": "PEN"
-            }],
-            "payer": {
-                "email": email,
-                "name": user.get('name', ''),
-            },
-            "external_reference": f"pseudosapiens_{user['id']}_{plan_id}",
-            "statement_descriptor": "Pseudosapiens",
-            "notification_url": "https://elias-webhook.vercel.app/webhook/mercadopago-notification",
-            "back_urls": {
-                "success": "https://pseudosapiens.com/success.html?premium=true",
-                "failure": "https://pseudosapiens.com/?error=payment_failed",
-                "pending": "https://pseudosapiens.com/?status=payment_pending"
-            },
-            "auto_return": "approved",
-            "expires": True,
-            "expiration_date_from": datetime.utcnow().isoformat(),
-            "expiration_date_to": (datetime.utcnow().replace(hour=23, minute=59, second=59)).isoformat()
-        }
-        
-        # Crear preferencia
-        preference_response = mp_sdk.preference().create(preference_data)
-        
-        if preference_response['status'] == 201:
-            preference = preference_response['response']
-            
-            logger.info("Premium payment preference created successfully", 
-                       email=email,
-                       preference_id=preference['id'],
-                       user_id=user['id'])
-            
-            response = jsonify({
-                'success': True,
-                'preference_id': preference['id'],
-                'init_point': preference['init_point'],
-                'sandbox_init_point': preference.get('sandbox_init_point'),
-                'plan_name': plan['display_name'],
-                'amount': plan['price_soles']
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response
-        else:
-            logger.error("Failed to create MercadoPago preference", 
-                        error=preference_response.get('message'),
-                        status=preference_response.get('status'))
-            response = jsonify({
-                'success': False,
-                'error': 'Error creando preferencia de pago'
-            })
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            return response, 500
-            
-    except Exception as e:
-        logger.error("Premium payment creation failed", error=str(e), exc_info=True)
         response = jsonify({
             'success': False,
             'error': 'Error interno del servidor'
