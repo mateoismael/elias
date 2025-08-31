@@ -932,8 +932,19 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            // Redirect to success page
-            window.location.href = '/success.html?source=google';
+            // Save user data to localStorage for dashboard access
+            const userData = {
+              id: data.user.id,
+              email: data.user.email,
+              name: data.user.name,
+              auth_method: data.user.auth_method,
+              avatar_url: data.user.avatar_url || null
+            };
+            localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
+            
+            // Redirect to dashboard instead of success page
+            console.log('User authenticated successfully, redirecting to dashboard');
+            window.location.href = '/dashboard.html';
           } else {
             throw new Error(data.error || 'Authentication failed');
           }
@@ -1052,8 +1063,65 @@
         }
       }
       
+      // Check if user is already authenticated and redirect to dashboard
+      function checkAuthenticationAndRedirect() {
+        const userData = localStorage.getItem('pseudosapiens_user');
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            if (user.email) {
+              console.log('User already authenticated, redirecting to dashboard');
+              window.location.href = '/dashboard.html';
+              return true;
+            }
+          } catch (e) {
+            // Invalid user data, remove it
+            localStorage.removeItem('pseudosapiens_user');
+          }
+        }
+        return false;
+      }
+      
+      // Handle email form submission to also save user data and redirect
+      function handleEmailFormSubmission() {
+        const form = document.querySelector('form[name="subscribe"]');
+        if (form) {
+          form.addEventListener('submit', function(event) {
+            const emailInput = document.getElementById('email');
+            const email = emailInput.value.trim();
+            
+            if (email) {
+              // Save basic user data for dashboard access
+              const userData = {
+                id: null, // Will be set by webhook response
+                email: email,
+                name: email.split('@')[0], // Use email prefix as name
+                auth_method: 'email',
+                avatar_url: null
+              };
+              localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
+              console.log('Email user data saved for dashboard access');
+            }
+            
+            // Let the form submit normally to Netlify, but then redirect
+            setTimeout(() => {
+              // Redirect to dashboard after a short delay
+              window.location.href = '/dashboard.html';
+            }, 1000);
+          });
+        }
+      }
+      
       // Initialize Google Sign-In when page loads (August 2025 compatible)
       window.onload = function() {
+        // Check authentication first
+        if (checkAuthenticationAndRedirect()) {
+          return; // Stop execution if redirecting
+        }
+        
+        // Set up email form handler
+        handleEmailFormSubmission();
+        
         if (typeof google !== 'undefined' && google.accounts) {
           google.accounts.id.initialize({
             client_id: '970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com',

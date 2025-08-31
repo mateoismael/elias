@@ -445,6 +445,97 @@ def get_stats():
             'error': str(e)
         }), 500
 
+@app.route('/webhook/user-subscription', methods=['POST', 'OPTIONS'])
+def get_user_subscription():
+    """Obtener estado de suscripción del usuario para dashboard"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email or '@' not in email:
+            response = jsonify({
+                'success': False,
+                'error': 'Email válido requerido'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 400
+        
+        logger.info("Getting user subscription status", email=email)
+        
+        # Conectar a Supabase
+        supabase = get_supabase()
+        
+        # Obtener usuario
+        user = get_user_by_email(supabase, email)
+        if not user:
+            response = jsonify({
+                'success': False,
+                'error': 'Usuario no encontrado'
+            })
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            return response, 404
+        
+        # Obtener suscripción activa con detalles del plan
+        subscription_response = supabase.table('subscriptions').select(
+            '*, subscription_plans!inner(*)'
+        ).eq('user_id', user['id']).eq('status', 'active').execute()
+        
+        if subscription_response.data:
+            subscription = subscription_response.data[0]
+            plan = subscription['subscription_plans']
+            
+            response_data = {
+                'success': True,
+                'user_id': user['id'],
+                'subscription': {
+                    'id': subscription['id'],
+                    'plan_id': subscription['plan_id'],
+                    'status': subscription['status'],
+                    'started_at': subscription['started_at'],
+                    'plan_details': {
+                        'name': plan['name'],
+                        'display_name': plan['display_name'],
+                        'price_soles': plan['price_soles'],
+                        'frequency_hours': plan['frequency_hours'],
+                        'max_emails_per_day': plan['max_emails_per_day'],
+                        'description': plan['description']
+                    }
+                },
+                'plan_id': subscription['plan_id']
+            }
+        else:
+            # No active subscription, return default free plan
+            response_data = {
+                'success': True,
+                'user_id': user['id'],
+                'subscription': None,
+                'plan_id': 0
+            }
+        
+        logger.info("User subscription retrieved", email=email, plan_id=response_data['plan_id'])
+        
+        response = jsonify(response_data)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+        
+    except Exception as e:
+        logger.error("Error getting user subscription", error=str(e), exc_info=True)
+        response = jsonify({
+            'success': False,
+            'error': 'Error interno del servidor'
+        })
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
+
 @app.route('/unsubscribe', methods=['POST', 'OPTIONS'])
 def handle_unsubscribe():
     """Endpoint para procesar desuscripciones desde unsubscribe.html"""
