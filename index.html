@@ -8,7 +8,7 @@
     <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💭</text></svg>"
     <meta
       name="description"
-      content="Recibe frases motivacionales personalizadas. Plan gratuito disponible. Premium desde S/ 5.00."
+      content="Recibe frases motivacionales personalizadas. Únete gratis y comienza tu viaje de inspiración diaria."
     />
     <style>
       :root {
@@ -515,10 +515,6 @@
           aria-describedby="frequency-help"
         >
           <option value="weekly-3" selected>3/semana (L-M-V, 8:00) - Gratis</option>
-          <option value="1-daily" disabled class="premium-option">1/día (8:00) [Premium S/5]</option>
-          <option value="2-daily" disabled class="premium-option">2/día (8:00, 17:00) [Premium S/5]</option>
-          <option value="3-daily" disabled class="premium-option">3/día (8:00, 14:00, 20:00) [Premium S/5]</option>
-          <option value="4-daily" disabled class="premium-option">4/día (8:00, 12:00, 17:00, 21:00) [Premium S/5]</option>
         </select>
         <div id="frequency-help" class="sr-only">
           Elige con qué frecuencia quieres recibir frases motivacionales
@@ -531,37 +527,6 @@
           Al enviar el formulario te suscribirás para recibir emails
         </div>
         
-        <!-- Botón Premium con MercadoPago -->
-        <div style="text-align: center; margin: 20px 0; padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 1px solid #cbd5e1;">
-          <p style="margin: 0 0 12px 0; font-size: 0.95rem; color: #475569; font-weight: 500;">¿Quieres más frases motivacionales?</p>
-          <button 
-            type="button" 
-            onclick="upgradeToPremium()" 
-            style="
-              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-              border: 1px solid #059669;
-              color: white;
-              padding: 14px 24px;
-              border-radius: 8px;
-              font-weight: 600;
-              font-size: 1rem;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-              min-height: 48px;
-            "
-            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(16, 185, 129, 0.3)';"
-            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.2)';"
-          >
-            🔄 Suscripción Premium - S/ 5.00/mes
-          </button>
-          <div style="margin-top: 12px;">
-            <small style="display: block; color: #64748b; font-size: 0.875rem;">
-              ✅ 1-4 frases por día • ✅ Pago con Yape, tarjetas y más<br>
-              ✅ Sin compromisos • ✅ Cancela cuando quieras
-            </small>
-          </div>
-        </div>
         
         <small
           >Al enviar, aceptas recibir correos. Incluimos instrucciones para
@@ -701,17 +666,6 @@
         }
       });
 
-      // Handle premium option clicks (Updated 2025)
-      frequencySelect.addEventListener("change", function(e) {
-        const selectedOption = e.target.selectedOptions[0];
-        if (selectedOption && selectedOption.disabled && selectedOption.classList.contains("premium-option")) {
-          // Reset to free option (new default)
-          frequencySelect.value = "weekly-3";
-          
-          // Show premium alert with new model
-          alert("Esta frecuencia requiere Premium (S/ 5.00).\n\nPremium te da control total:\n- 1/día (8:00)\n- 2/día (8:00, 17:00)\n- 3/día (8:00, 14:00, 20:00)\n- 4/día (8:00, 12:00, 17:00, 21:00)\n\nPróximamente disponible.");
-        }
-      });
       
       // Exit Intent Detection
       let exitIntentTriggered = false;
@@ -956,112 +910,6 @@
         });
       }
       
-      // Premium upgrade function with MercadoPago
-      async function upgradeToPremium() {
-        const email = document.getElementById('email').value.trim();
-        
-        if (!email) {
-          alert('Primero ingresa tu email para continuar con el upgrade a Premium');
-          document.getElementById('email').focus();
-          return;
-        }
-        
-        if (!validateEmail(email)) {
-          alert('Por favor ingresa un email válido');
-          document.getElementById('email').focus();
-          return;
-        }
-        
-        // Mostrar modal de selección de plan
-        const planSelection = confirm(
-          '🔄 SUSCRIPCIÓN MENSUAL PREMIUM (S/ 5.00/mes)\\n\\n' +
-          'Renovación automática cada 30 días:\\n\\n' +
-          '✅ Plan 1: 1 frase por día (8:00 AM)\\n' +
-          '✅ Plan 2: 2 frases por día (8:00 AM, 5:00 PM)\\n' +
-          '✅ Plan 3: 3 frases por día (8:00 AM, 2:00 PM, 8:00 PM)\\n' +
-          '✅ Plan 4: 4 frases por día (8:00 AM, 12:00 PM, 5:00 PM, 9:00 PM)\\n\\n' +
-          '🔄 RENOVACIÓN AUTOMÁTICA: Se cobrará S/ 5.00 cada mes\\n' +
-          '❌ CANCELACIÓN: Puedes cancelar desde tu perfil de MercadoPago\\n\\n' +
-          'Incluye: Yape, tarjetas, transferencias\\n\\n' +
-          '¿Quieres continuar con la Suscripción Mensual (2 frases/día)?'
-        );
-        
-        if (!planSelection) {
-          return;
-        }
-        
-        // Deshabilitar botón y mostrar loading
-        const upgradeBtn = event.target;
-        const originalText = upgradeBtn.innerHTML;
-        upgradeBtn.innerHTML = '⏳ Creando pago seguro...';
-        upgradeBtn.disabled = true;
-        upgradeBtn.style.opacity = '0.7';
-        
-        try {
-          console.log('Creating monthly subscription for:', email);
-          
-          // Llamar al endpoint de suscripción mensual
-          const response = await fetch('https://elias-webhook.vercel.app/webhook/create-premium-subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: email,
-              plan_id: 2 // Plan Premium 2 frases/día por defecto
-            })
-          });
-          
-          const result = await response.json();
-          console.log('Monthly subscription response:', result);
-          
-          if (result.success) {
-            // Redirigir a MercadoPago (incluye Yape automáticamente)
-            console.log('Redirecting to MercadoPago subscription checkout:', result.init_point);
-            
-            // Usar sandbox_init_point si está disponible (modo testing)
-            const checkoutUrl = result.sandbox_init_point || result.init_point;
-            
-            // Mostrar mensaje de confirmación antes de redirigir
-            alert(
-              `✅ ¡Suscripción Mensual Creada!\\n\\n` +
-              `Te estamos redirigiendo a MercadoPago para autorizar tu suscripción\\n\\n` +
-              `💰 PRECIO: S/ ${result.amount} cada mes (renovación automática)\\n` +
-              `📅 PRÓXIMO COBRO: ${result.next_billing_date || 'Día 1 del siguiente mes'}\\n\\n` +
-              `Podrás pagar con:\\n` +
-              `• 📱 Yape (más popular)\\n` +
-              `• 💳 Tarjetas (Visa, Mastercard)\\n` +
-              `• 🏦 Transferencia bancaria\\n\\n` +
-              `Plan: ${result.plan_name}\\n` +
-              `⚠️ Puedes cancelar la suscripción desde tu perfil MercadoPago`
-            );
-            
-            // Redirigir a MercadoPago
-            window.location.href = checkoutUrl;
-          } else {
-            throw new Error(result.error || 'Error desconocido');
-          }
-          
-        } catch (error) {
-          console.error('Premium upgrade error:', error);
-          
-          let errorMessage = 'No pudimos procesar tu upgrade. ';
-          if (error.message.includes('Usuario no encontrado')) {
-            errorMessage += 'Primero regístrate gratis y luego podrás hacer upgrade.';
-          } else if (error.message.includes('Plan no encontrado')) {
-            errorMessage += 'Plan no disponible temporalmente.';
-          } else {
-            errorMessage += 'Por favor intenta nuevamente en unos minutos.';
-          }
-          
-          alert('❌ Error: ' + errorMessage);
-        } finally {
-          // Restaurar botón
-          upgradeBtn.innerHTML = originalText;
-          upgradeBtn.disabled = false;
-          upgradeBtn.style.opacity = '1';
-        }
-      }
       
       // Check if user is already authenticated and redirect to dashboard
       function checkAuthenticationAndRedirect() {
