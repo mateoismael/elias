@@ -836,8 +836,11 @@ def create_subscription_plan(mp_sdk, plan_details):
 def create_monthly_subscription(user, plan_details, plan_id):
     """Crear suscripción mensual automática"""
     try:
+        # Obtener MercadoPago SDK
+        mp_sdk = get_mercadopago_sdk()
+        
         # Primero crear el plan si no existe
-        plan_response = create_subscription_plan(None, plan_details)
+        plan_response = create_subscription_plan(mp_sdk, plan_details)
         if not plan_response:
             return None
         
