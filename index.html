@@ -462,7 +462,8 @@
         <div id="g_id_onload"
              data-client_id="970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com"
              data-context="signin"
-             data-ux_mode="popup"
+             data-ux_mode="redirect"
+             data-login_uri="https://pseudosapiens.com/index.html"
              data-callback="handleGoogleSignIn"
              data-auto_prompt="false">
         </div>
@@ -867,6 +868,16 @@
       function handleGoogleSignIn(response) {
         console.log('Google Sign-In successful:', response);
         
+        // Handle both popup and redirect responses
+        let credential = response.credential || response;
+        
+        // Check if we have a valid credential
+        if (!credential || typeof credential !== 'string') {
+          console.error('Invalid Google credential received:', response);
+          alert('Error al iniciar sesión con Google. Intenta de nuevo.');
+          return;
+        }
+        
         // Show loading state
         const googleContainer = document.querySelector('.google-signin-container');
         const originalContent = googleContainer.innerHTML;
@@ -879,7 +890,7 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            credential: response.credential,
+            credential: credential,
             frequency: 'weekly-3' // Default to free plan
           })
         })
@@ -971,20 +982,27 @@
         handleEmailFormSubmission();
         
         if (typeof google !== 'undefined' && google.accounts) {
+          // Detect if we're on mobile
+          const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
           google.accounts.id.initialize({
             client_id: '970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com',
             callback: handleGoogleSignIn,
             auto_select: false,
-            cancel_on_tap_outside: true
-            // Note: FedCM is now mandatory in August 2025, no need for use_fedcm_for_prompt
+            cancel_on_tap_outside: true,
+            // Use redirect mode on mobile for better compatibility
+            ux_mode: isMobile ? 'redirect' : 'popup',
+            login_uri: isMobile ? 'https://pseudosapiens.com/index.html' : undefined
           });
           
-          // Show One Tap prompt
-          google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              console.log('Google One Tap not shown:', notification.getNotDisplayedReason() || 'User action required');
-            }
-          });
+          // Only show One Tap on desktop - problematic on mobile
+          if (!isMobile) {
+            google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                console.log('Google One Tap not shown:', notification.getNotDisplayedReason() || 'User action required');
+              }
+            });
+          }
         }
       };
     </script>
