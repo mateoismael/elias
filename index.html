@@ -459,15 +459,7 @@
 
       <!-- Google Sign-In Button -->
       <div class="google-signin-container">
-        <div id="g_id_onload"
-             data-client_id="970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com"
-             data-context="signin"
-             data-ux_mode="redirect"
-             data-login_uri="https://pseudosapiens.com/index.html"
-             data-callback="handleGoogleSignIn"
-             data-auto_prompt="false">
-        </div>
-        <div class="g_id_signin"
+        <div id="g_id_signin"
              data-type="standard"
              data-shape="rectangular"
              data-theme="outline"
@@ -971,7 +963,7 @@
         }
       }
       
-      // Initialize Google Sign-In when page loads (August 2025 compatible)
+      // Initialize Google Sign-In when page loads (Fixed 2025)
       window.onload = function() {
         // Check authentication first
         if (checkAuthenticationAndRedirect()) {
@@ -985,24 +977,30 @@
           // Detect if we're on mobile
           const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           
+          // Unified Google Sign-In configuration
           google.accounts.id.initialize({
             client_id: '970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com',
             callback: handleGoogleSignIn,
             auto_select: false,
             cancel_on_tap_outside: true,
-            // Use redirect mode on mobile for better compatibility
-            ux_mode: isMobile ? 'redirect' : 'popup',
-            login_uri: isMobile ? 'https://pseudosapiens.com/index.html' : undefined
+            // Always use popup for consistency
+            ux_mode: 'popup'
           });
           
-          // Only show One Tap on desktop - problematic on mobile
-          if (!isMobile) {
-            google.accounts.id.prompt((notification) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                console.log('Google One Tap not shown:', notification.getNotDisplayedReason() || 'User action required');
-              }
-            });
-          }
+          // Render the sign-in button (no One Tap to avoid conflicts)
+          google.accounts.id.renderButton(
+            document.getElementById('g_id_signin'),
+            {
+              type: 'standard',
+              shape: 'rectangular',
+              theme: 'outline',
+              text: 'signin_with',
+              size: 'large',
+              logo_alignment: 'left'
+            }
+          );
+          
+          console.log('Google Sign-In button rendered successfully');
         }
       };
     </script>
