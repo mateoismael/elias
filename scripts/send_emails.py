@@ -577,12 +577,10 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
             author=phrase.author,
             hour_peru=hour_peru
         )
-    except ImportError as e:
-        logger.warning("Smart subject generator not available", error=str(e))
-        # Fallback to original system
-        subjects = ["Reflexión", "Pensamiento", "Inspiración"]
-        subject_index = hash(phrase.id) % len(subjects)
-        subject = subjects[subject_index]
+    except Exception as e:
+        logger.warning("OpenAI subject generation failed, using fallback", error=str(e))
+        # Fallback simple para evitar errores
+        subject = "Momento de reflexión"
     
     # Obtener primer nombre del autor para la firma
     author_first_name = phrase.author.split()[0]  # "Steve" de "Steve Jobs"

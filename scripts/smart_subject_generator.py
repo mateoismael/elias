@@ -23,27 +23,6 @@ MAX_SUBJECT_LENGTH = 50
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_MAX_TOKENS = 20
 
-# Bancos de asuntos de fallback organizados por momento del día
-FALLBACK_SUBJECTS = {
-    'morning': [
-        "Para comenzar bien", "Tu momento es ahora", "Algo importante",
-        "Para reflexionar", "Pensamiento matutino", "Una perspectiva nueva",
-        "Energía para hoy", "Comienza fuerte", "Tu impulso diario",
-        "Algo que necesitas", "Para empezar", "Momento perfecto"
-    ],
-    'afternoon': [
-        "Pausa para pensar", "Necesitabas escuchar esto", "Un recordatorio",
-        "Para la tarde", "Momento de reflexión", "Algo que importa",
-        "A mitad del día", "Para continuar", "Tu pausa necesaria",
-        "Impulso vespertino", "Sigue adelante", "Para reflexionar"
-    ],
-    'evening': [
-        "Al final del día", "Para cerrar bien", "Una reflexión",
-        "Antes de descansar", "Para contemplar", "Pensamiento nocturno",
-        "Cerrando fuerte", "Tu reflexión", "Para la noche",
-        "Último impulso", "Para finalizar", "Contempla esto"
-    ]
-}
 
 # =====================================================
 # FUNCIÓN PRINCIPAL - OPENAI INTEGRATION  
@@ -52,23 +31,20 @@ FALLBACK_SUBJECTS = {
 def generate_smart_subject_with_openai(
     phrase_text: str, 
     author: str, 
-    hour_peru: int,
-    use_openai: bool = True,
-    hybrid_mode: bool = False  # Deshabilitado - solo OpenAI con GPT-4o mini
+    hour_peru: int
 ) -> Dict[str, any]:
     """
-    🧠 GENERA ASUNTO ÚNICO usando OpenAI API con fallback robusto
+    🧠 GENERA ASUNTO ÚNICO usando OpenAI GPT-4o mini
     
     Args:
         phrase_text: Texto de la frase motivacional
         author: Autor de la frase  
         hour_peru: Hora en Perú (0-23) para contexto temporal
-        use_openai: Si usar OpenAI o ir directo al fallback
         
     Returns:
         Dict: {
             'subject': str,           # Asunto generado
-            'method': str,           # 'openai' o 'fallback'  
+            'method': str,           # siempre 'openai'
             'success': bool,         # Si la generación fue exitosa
             'cost_estimate': float   # Estimación de costo en USD
         }
@@ -77,24 +53,10 @@ def generate_smart_subject_with_openai(
     # Determinar contexto temporal
     time_context = _get_time_context(hour_peru)
     
-    # Si OpenAI está deshabilitado, ir directo al fallback
-    if not use_openai:
-        return _generate_fallback_subject(phrase_text, hour_peru, "openai_disabled")
-    
-    # MODO HÍBRIDO: Alternar entre OpenAI y fallback para más variedad
-    if hybrid_mode:
-        import random
-        # 70% OpenAI, 30% fallback mejorado para variedad
-        if random.random() < 0.3:
-            result = _generate_fallback_subject(phrase_text, hour_peru, "hybrid_variety")
-            result['method'] = 'hybrid_fallback'
-            return result
-    
-    # Verificar configuración de OpenAI
+    # Verificar configuración de OpenAI (requerida)
     api_key = os.getenv('OPENAI_API_KEY')
     if not api_key:
-        logger.warning("OPENAI_API_KEY not found, using fallback")
-        return _generate_fallback_subject(phrase_text, hour_peru, "no_api_key")
+        raise ValueError("OPENAI_API_KEY is required but not found in environment variables")
     
     try:
         # Importar OpenAI solo cuando se necesita
@@ -141,8 +103,8 @@ def generate_smart_subject_with_openai(
         }
         
     except ImportError as e:
-        logger.warning("OpenAI library not installed, using fallback", error=str(e))
-        return _generate_fallback_subject(phrase_text, hour_peru, "openai_not_installed")
+        logger.error("OpenAI library not installed", error=str(e))
+        raise ImportError(f"OpenAI library is required but not installed: {e}")
         
     except Exception as e:
         logger.error(
@@ -150,7 +112,7 @@ def generate_smart_subject_with_openai(
             error=str(e),
             phrase_preview=phrase_text[:30] + "..."
         )
-        return _generate_fallback_subject(phrase_text, hour_peru, f"openai_error: {str(e)[:50]}")
+        raise RuntimeError(f"Failed to generate subject with OpenAI: {e}")
 
 # =====================================================
 # FUNCIONES DE APOYO - OPENAI
@@ -242,49 +204,6 @@ def _calculate_cost_estimate(prompt: str, response: str) -> float:
     
     return round(input_cost + output_cost, 6)
 
-# =====================================================
-# SISTEMA DE FALLBACK ROBUSTO
-# =====================================================
-
-def _generate_fallback_subject(
-    phrase_text: str, 
-    hour_peru: int, 
-    reason: str = "fallback"
-) -> Dict[str, any]:
-    """
-    🔄 SISTEMA DE FALLBACK INTELIGENTE
-    Genera asuntos variados sin OpenAI usando lógica determinística
-    """
-    
-    # Determinar momento del día
-    if 5 <= hour_peru < 12:
-        subject_pool = FALLBACK_SUBJECTS['morning']
-    elif 12 <= hour_peru < 18:
-        subject_pool = FALLBACK_SUBJECTS['afternoon']  
-    else:
-        subject_pool = FALLBACK_SUBJECTS['evening']
-    
-    # Selección determinística basada en hash de la frase
-    # Esto garantiza consistencia: misma frase = mismo asunto
-    phrase_hash = hashlib.md5(phrase_text.encode()).hexdigest()
-    index = int(phrase_hash[:8], 16) % len(subject_pool)
-    subject = subject_pool[index]
-    
-    logger.info(
-        "Fallback subject generated",
-        subject=subject,
-        reason=reason,
-        phrase_preview=phrase_text[:30] + "...",
-        hour_peru=hour_peru
-    )
-    
-    return {
-        'subject': subject,
-        'method': 'fallback', 
-        'success': True,
-        'cost_estimate': 0.0,
-        'reason': reason
-    }
 
 # =====================================================
 # FUNCIONES DE UTILIDAD Y TESTING
@@ -305,9 +224,8 @@ def get_system_status() -> Dict[str, any]:
     return {
         'openai_api_key_configured': api_key_configured,
         'openai_library_available': openai_available,
-        'fallback_subjects_count': sum(len(subjects) for subjects in FALLBACK_SUBJECTS.values()),
-        'system_ready': True,  # Siempre listo gracias al fallback
-        'default_method': 'openai' if (api_key_configured and openai_available) else 'fallback'
+        'system_ready': api_key_configured and openai_available,  # Solo listo si OpenAI funciona
+        'default_method': 'openai'
     }
 
 def test_subject_generation(phrase_text: str = None, author: str = None) -> None:
@@ -331,12 +249,11 @@ def test_subject_generation(phrase_text: str = None, author: str = None) -> None
         print(f"\nHORA: {hour}:00")
         
         # Test con OpenAI
-        result_ai = generate_smart_subject_with_openai(phrase_text, author, hour, use_openai=True)
-        print(f"   OpenAI: '{result_ai['subject']}' ({result_ai['method']}) - ${result_ai['cost_estimate']:.6f}")
-        
-        # Test fallback
-        result_fallback = generate_smart_subject_with_openai(phrase_text, author, hour, use_openai=False)
-        print(f"   Fallback: '{result_fallback['subject']}' ({result_fallback['method']})")
+        try:
+            result_ai = generate_smart_subject_with_openai(phrase_text, author, hour)
+            print(f"   OpenAI: '{result_ai['subject']}' ({result_ai['method']}) - ${result_ai['cost_estimate']:.6f}")
+        except Exception as e:
+            print(f"   OpenAI: ERROR - {str(e)}")
     
     # System status
     print(f"\nSYSTEM STATUS:")
@@ -356,6 +273,7 @@ def generate_subject_for_email(phrase_text: str, author: str, hour_peru: int) ->
     """
     🔄 Función simple de compatibilidad
     Retorna solo el asunto (string) para integración fácil
+    Lanza excepción si OpenAI falla
     """
     result = generate_smart_subject_with_openai(phrase_text, author, hour_peru)
     return result['subject']
