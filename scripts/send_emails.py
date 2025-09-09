@@ -146,6 +146,7 @@ class Subscriber(BaseModel):
     """Validated subscriber model."""
     email: EmailStr
     frequency: FrequencyEnum = Field(default=FrequencyEnum.HOURLY, description="Email frequency in hours")
+    user_id: Optional[str] = Field(default=None, description="User ID for anti-repetition system")
     
     @field_validator('frequency', mode='before')
     @classmethod
@@ -491,7 +492,8 @@ def get_subscribers_from_supabase() -> List[Subscriber]:
                 
                 subscriber = Subscriber(
                     email=sub_data['email'],
-                    frequency=frequency
+                    frequency=frequency,
+                    user_id=sub_data.get('user_id')  # Incluir user_id para anti-repetición
                 )
                 subscribers.append(subscriber)
                 
@@ -843,37 +845,18 @@ def main_modernized(argv: List[str]) -> int:
             email_config = None
         netlify_config = NetlifyConfig.from_env()
         
-        # Load and select phrase from Supabase
+        # Import phrase functions for individual selection
         try:
-            from database_phrases import get_random_phrase
-            phrase_data = get_random_phrase()
-            if phrase_data:
-                phrase = Phrase(
-                    id=phrase_data['id'],
-                    text=phrase_data['text'],
-                    author=phrase_data['author']
-                )
-                phrases = [phrase]  # Single phrase format for compatibility
-            else:
-                logger.error("No phrases found in Supabase database")
-                return
+            from database_phrases import get_random_phrase_for_user, get_random_phrase
         except ImportError as e:
             logger.error("Database module not available", error=str(e))
             return
         except Exception as e:
-            logger.error("Error loading phrase from database", error=str(e))
+            logger.error("Error importing phrase functions", error=str(e))
             return
         
-        # Choose pseudo-random phrase per hour (deterministic within the hour)
+        # Get current hour slot for logging
         slot = current_hour_slot()
-        seed_bytes = hashlib.sha256(f"{slot}:{len(phrases)}".encode('utf-8')).digest()
-        seed_int = int.from_bytes(seed_bytes[:8], 'big')
-        idx = seed_int % len(phrases)
-        selected_phrase = phrases[idx]
-        
-        logger.info("Phrase selected", 
-                   phrase_id=selected_phrase.id, 
-                   phrase_preview=selected_phrase.text[:50] + "..." if len(selected_phrase.text) > 50 else selected_phrase.text)
 
         # Get subscribers from Supabase
         all_subscribers: List[Subscriber] = []
@@ -912,17 +895,35 @@ def main_modernized(argv: List[str]) -> int:
         if dry_run:
             logger.info("DRY RUN - Email content preview", 
                        hour_slot=slot, 
-                       phrase_index=idx,
                        total_subscribers=len(all_subscribers),
                        active_subscribers=len(active_subscribers))
             
-            # Show preview of first few subscribers
+            # Show preview of first few subscribers with individual phrases
             for i, subscriber in enumerate(active_subscribers[:3]):
-                content = build_email_content(subscriber, selected_phrase)
-                logger.info(f"Preview {i+1}", 
-                           recipient=subscriber.email,
-                           frequency=subscriber.frequency.name,
-                           subject=content.subject)
+                try:
+                    # Get individual phrase for this user
+                    if subscriber.user_id:
+                        phrase_data = get_random_phrase_for_user(subscriber.user_id)
+                    else:
+                        phrase_data = get_random_phrase()
+                    
+                    if phrase_data:
+                        phrase = Phrase(
+                            id=phrase_data['id'],
+                            text=phrase_data['text'],
+                            author=phrase_data['author']
+                        )
+                        content = build_email_content(subscriber, phrase)
+                        logger.info(f"Preview {i+1}", 
+                                   recipient=subscriber.email,
+                                   frequency=subscriber.frequency.name,
+                                   subject=content.subject,
+                                   phrase_id=phrase.id,
+                                   phrase_preview=phrase.text[:50] + "...")
+                    else:
+                        logger.error(f"No phrase for preview {i+1}", recipient=subscriber.email)
+                except Exception as e:
+                    logger.error(f"Error in preview {i+1}", recipient=subscriber.email, error=str(e))
             return 0
 
         if not active_subscribers:
@@ -931,15 +932,37 @@ def main_modernized(argv: List[str]) -> int:
                        total_subscribers=len(all_subscribers))
             return 0
 
-        # Build email content for all active subscribers
+        # Build email content for all active subscribers - individual phrases per user
         email_contents = []
         for subscriber in active_subscribers:
             try:
-                content = build_email_content(subscriber, selected_phrase)
-                email_contents.append(content)
+                # Get individual phrase for this user (anti-repetition system)
+                if subscriber.user_id:
+                    phrase_data = get_random_phrase_for_user(subscriber.user_id)
+                else:
+                    phrase_data = get_random_phrase()
+                
+                if phrase_data:
+                    phrase = Phrase(
+                        id=phrase_data['id'],
+                        text=phrase_data['text'],
+                        author=phrase_data['author']
+                    )
+                    content = build_email_content(subscriber, phrase)
+                    email_contents.append(content)
+                    logger.info("Individual phrase selected", 
+                               user_id=subscriber.user_id,
+                               email=subscriber.email[:20] + "...",
+                               phrase_id=phrase.id)
+                else:
+                    logger.error("No phrase available", 
+                                subscriber_email=subscriber.email,
+                                user_id=subscriber.user_id)
+                    
             except Exception as e:
                 logger.error("Failed to build email content", 
                             subscriber_email=subscriber.email,
+                            user_id=subscriber.user_id,
                             error=str(e))
 
         logger.info("Email content generated", 

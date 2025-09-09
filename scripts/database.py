@@ -219,19 +219,20 @@ class SupabaseManager:
         """Get all users with active subscriptions and their plan details"""
         try:
             response = self.supabase.table('subscriptions').select(
-                '*, users!inner(email), subscription_plans!inner(*)'
+                '*, users!inner(id, email), subscription_plans!inner(*)'
             ).eq('status', 'active').execute()
             
             subscribers = []
             for data in response.data:
                 subscribers.append({
+                    'user_id': data['users']['id'],  # NUEVO: ID del usuario para anti-repetición
                     'email': data['users']['email'],
                     'frequency_hours': data['subscription_plans']['frequency_hours'],
                     'plan_name': data['subscription_plans']['name'],
                     'max_emails_per_day': data['subscription_plans']['max_emails_per_day']
                 })
             
-            logger.info("Retrieved active subscribers", count=len(subscribers))
+            logger.info("Retrieved active subscribers with user_ids", count=len(subscribers))
             return subscribers
             
         except Exception as e:
