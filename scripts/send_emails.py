@@ -569,10 +569,20 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
     
     unique_timestamp = generate_unique_timestamp(subscriber.email, phrase.id)
     
-    # Generate subject - rotación entre 3 opciones simples
-    subjects = ["Reflexión", "Pensamiento", "Inspiración"]
-    subject_index = hash(phrase.id) % len(subjects)
-    subject = subjects[subject_index]
+    # Generate smart subject using OpenAI or fallback
+    try:
+        from smart_subject_generator import generate_subject_for_email
+        subject = generate_subject_for_email(
+            phrase_text=phrase.text,
+            author=phrase.author,
+            hour_peru=hour_peru
+        )
+    except ImportError as e:
+        logger.warning("Smart subject generator not available", error=str(e))
+        # Fallback to original system
+        subjects = ["Reflexión", "Pensamiento", "Inspiración"]
+        subject_index = hash(phrase.id) % len(subjects)
+        subject = subjects[subject_index]
     
     # Obtener primer nombre del autor para la firma
     author_first_name = phrase.author.split()[0]  # "Steve" de "Steve Jobs"

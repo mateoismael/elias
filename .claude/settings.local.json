@@ -5,7 +5,8 @@
       "Bash(gh run list:*)",
       "WebSearch",
       "Bash(claude config list)",
-      "Bash(claude config get model)"
+      "Bash(claude config get model)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
