@@ -171,11 +171,21 @@ def _build_optimized_prompt(phrase_text: str, author: str, time_context: str) ->
     template_options = templates.get(detected_theme, templates['general'])
     selected_template = template_options[phrase_hash % len(template_options)]
     
-    return f"""Crea un asunto de email de máximo 40 caracteres que capture la esencia de esta frase:
+    return f"""Crea un asunto de email natural y conversacional de máximo 40 caracteres para esta frase:
 
 "{phrase_text}"
 
-El asunto debe ser como: "{selected_template}" pero adaptado al contenido específico.
+IMPORTANTE:
+- NO uses dos puntos (:) ni formato académico
+- Que suene como una conversación casual, no como un título
+- Evita formatos como "Tema: descripción" o "Concepto: explicación"
+- Usa un tono directo y amigable
+
+Ejemplos de estilo deseado:
+- "Encuentra tu felicidad primero"
+- "Vive el momento presente"  
+- "Atrévete a intentar hoy"
+
 Responde solo el asunto, sin comillas ni explicaciones."""
 
 def _clean_and_validate_subject(subject: str) -> str:
