@@ -1,8 +1,10 @@
-# 💭 Pseudosapiens
+# 💭 Pseudosapiens - Documentación Interna
 
-**Sistema inteligente de email marketing para frases motivacionales con IA**
+**Repositorio Privado de Negocio - Sistema Inteligente de Email Marketing**
 
-Pseudosapiens es una plataforma automatizada que envía frases motivacionales personalizadas a suscriptores, utilizando OpenAI GPT-4o mini para generar asuntos únicos e inteligentes. El sistema incluye gestión avanzada de usuarios, prevención de duplicados y análisis completo.
+Plataforma automatizada para el envío personalizado de frases motivacionales utilizando OpenAI GPT-4o mini para la generación única de asuntos. Gestión avanzada de usuarios, algoritmos anti-repetición y análisis integral.
+
+> **⚠️ CONFIDENCIAL**: Este es un repositorio privado de negocio. Todo el código, estrategias y documentación son propietarios y confidenciales.
 
 ## 🚀 Características Principales
 
@@ -266,26 +268,27 @@ print("Emails de prueba:", os.getenv('TEST_EMAILS'))
 - [ ] Analytics avanzados con Google Analytics
 - [ ] Integración con más proveedores de email
 
-## 🤝 Contribución
+## 🔒 Acceso y Seguridad
 
-1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
+- **Repositorio Privado**: Solo miembros autorizados del equipo tienen acceso
+- **Claves de Producción**: Almacenadas de forma segura en GitHub Secrets
+- **Base de Datos**: Supabase con seguridad a nivel de fila habilitada
+- **Email**: Resend API con verificación de dominio
 
-## 📝 Licencia
+## 📝 Licencia y Propiedad
 
-Distribuido bajo la licencia MIT. Ver `LICENSE` para más información.
+**© 2025 Pseudosapiens - Todos los Derechos Reservados**
 
-## 📞 Soporte
+Este software y toda la documentación asociada son propietarios y confidenciales. La copia, distribución o uso no autorizado está estrictamente prohibido.
 
-- **Email**: reflexiones@pseudosapiens.com
-- **Issues**: [GitHub Issues](https://github.com/tu-usuario/elias/issues)
-- **Documentación**: Este README y comentarios en el código
+## 📞 Soporte Interno
+
+- **Problemas Técnicos**: Contactar directamente al equipo de desarrollo
+- **Lógica de Negocio**: Ver documentación en línea del código
+- **Problemas de Producción**: Revisar logs de GitHub Actions y dashboard de Supabase
 
 ---
 
-**Hecho con ❤️ y ☕ por el equipo de Pseudosapiens**
+**Sistema Interno Pseudosapiens - Equipo de Desarrollo**
 
-*"La inspiración diaria, ahora más inteligente"*
+*"Plataforma inteligente de entrega de inspiración diaria"*
