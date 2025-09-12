@@ -331,7 +331,7 @@
 
               // Optional: Redirect after success
               setTimeout(() => {
-                const successUrl = `/success.html?email=${encodeURIComponent(
+                const successUrl = `/success?email=${encodeURIComponent(
                   email
                 )}&plan=${encodeURIComponent(planName)}`;
                 window.location.href = successUrl;
@@ -409,7 +409,7 @@
             `¿Estás seguro que quieres cancelar tu suscripción?\n\nEmail: ${email}\n\nNo recibirás más frases motivacionales.`
           )
         ) {
-          window.location.href = `/unsubscribe.html?email=${encodeURIComponent(
+          window.location.href = `/unsubscribe?email=${encodeURIComponent(
             email
           )}`;
         }

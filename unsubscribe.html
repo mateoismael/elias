@@ -463,11 +463,11 @@
       function goToPreferences() {
         const email = document.getElementById("email-input").value.trim();
         if (email) {
-          window.location.href = `/preferences.html?email=${encodeURIComponent(
+          window.location.href = `/preferences?email=${encodeURIComponent(
             email
           )}`;
         } else {
-          window.location.href = "/preferences.html";
+          window.location.href = "/preferences";
         }
       }
 

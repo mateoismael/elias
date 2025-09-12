@@ -479,7 +479,7 @@
         method="POST"
         data-netlify="true"
         netlify-honeypot="bot-field"
-        action="/success.html"
+        action="/success"
       >
         <input type="hidden" name="form-name" value="subscribe" />
         <p hidden>
@@ -901,7 +901,7 @@
             
             // Redirect to dashboard instead of success page
             console.log('User authenticated successfully, redirecting to dashboard');
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
           } else {
             throw new Error(data.error || 'Authentication failed');
           }
@@ -922,7 +922,7 @@
             const user = JSON.parse(userData);
             if (user.email) {
               console.log('User already authenticated, redirecting to dashboard');
-              window.location.href = '/dashboard.html';
+              window.location.href = '/dashboard';
               return true;
             }
           } catch (e) {
@@ -957,7 +957,7 @@
             // Let the form submit normally to Netlify, but then redirect
             setTimeout(() => {
               // Redirect to dashboard after a short delay
-              window.location.href = '/dashboard.html';
+              window.location.href = '/dashboard';
             }, 1000);
           });
         }

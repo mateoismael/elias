@@ -466,7 +466,7 @@
             
             if (!userData) {
                 // No user data found, redirect to landing page
-                window.location.href = '/index.html';
+                window.location.href = '/';
                 return;
             }
             
@@ -475,7 +475,7 @@
                 initializeDashboard();
             } catch (e) {
                 console.error('Error parsing user data:', e);
-                window.location.href = '/index.html';
+                window.location.href = '/';
             }
         }
         
@@ -824,7 +824,7 @@
             localStorage.removeItem('pseudosapiens_user');
             
             // Redirect to landing page
-            window.location.href = '/index.html';
+            window.location.href = '/';
         }
         
         function showError(message) {

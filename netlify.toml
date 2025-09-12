@@ -1,14 +1,30 @@
-# Netlify configuration (Aug 2025)
+# Netlify configuration (Sep 2025)
 # Static site, no build step needed. Enables form detection at deploy time.
 
 [build]
   command = ""
   publish = "."
 
-# Optional: Redirect POSTs to success page for better UX
+# =====================================================
+# CLEAN URLs - SEO OPTIMIZED (2025 BEST PRACTICES)
+# =====================================================
+
+# Force redirect ALL .html extensions to clean URLs
+[[redirects]]
+  from = "/*.html"
+  to = "/:splat"
+  status = 301
+  force = true
+
+# Specific clean URL mappings (these will be handled by the wildcard above, but keeping for clarity)
 [[redirects]]
   from = "/success"
   to = "/success.html"
+  status = 200
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
   status = 200
 
 [[redirects]]
