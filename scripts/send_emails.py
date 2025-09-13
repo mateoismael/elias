@@ -585,33 +585,23 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
     # Obtener primer nombre del autor para la firma
     author_first_name = phrase.author.split()[0]  # "Steve" de "Steve Jobs"
     
-    # Build HTML content - Ultra-minimalista
+    # Build HTML content - Ultra-minimalista (sin diseño visual)
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:20px;font-family:system-ui,sans-serif;line-height:1.5;color:#333">
+<body style="margin:0;padding:20px;font-family:Arial,sans-serif;line-height:1.6">
 
-<!-- SOLO LA FRASE CON SU ESTILO ACTUAL -->
-<p style="margin:20px 0;font-size:17px;font-style:italic;color:#444;padding:15px;background:#f8f9fa;border-left:3px solid #ddd">
-{phrase.text}
-</p>
+<p>{phrase.text}</p>
 
-<!-- FIRMA MINIMA -->
-<p style="margin:20px 0 5px;font-size:14px;color:#666">
-{author_first_name}
-</p>
+<p>— {author_first_name}</p>
 
-<!-- ENLACES DEL FOOTER (CONSERVADOS) -->
-<p style="margin:30px 0 0;font-size:12px;color:#999">
-<a href="https://pseudosapiens.com/preferences" style="color:#999">Cambiar frecuencia</a> • 
-<a href="https://pseudosapiens.com/unsubscribe" style="color:#999">Desuscribirse</a>
-</p>
+<p><a href="https://pseudosapiens.com/preferences">Cambiar frecuencia</a> • <a href="https://pseudosapiens.com/unsubscribe">Desuscribirse</a></p>
 
 <!-- Timestamp invisible único para evitar agrupación en Gmail -->
-<div style="display:none;font-size:1px;color:transparent">{unique_timestamp}</div>
+<div style="display:none">{unique_timestamp}</div>
 
 </body>
 </html>"""
@@ -714,11 +704,12 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
         (content.subject + "|" + slot + "|" + content.recipient.email).encode('utf-8')
     ).hexdigest()
     
-    # Generate dynamic sender based on phrase author
-    dynamic_sender = f'"{content.phrase.author}" <reflexiones@pseudosapiens.com>'
+    # FIXED: Consistent sender for better reputation (2025 best practice)
+    # Dynamic senders damage domain reputation
+    consistent_sender = "Pseudosapiens <reflexiones@pseudosapiens.com>"
     
     email_data = {
-        "from": dynamic_sender,  # Sender dinámico por autor
+        "from": consistent_sender,  # Sender consistente para mejor reputación
         "to": [content.recipient.email],
         "subject": content.subject,
         "html": content.html,
@@ -727,9 +718,17 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
         "headers": {
             "Idempotency-Key": idem,
             "Message-ID": f"<{idem}@pseudosapiens.com>",
-            # Headers básicos - sin List-Unsubscribe por ahora
-            # "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe>",
-            # "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+            
+            # Headers OBLIGATORIOS 2025 - ACTIVADOS
+            "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            
+            # Headers optimizados para deliverability
+            "X-Entity-Type": "transactional",
+            "X-Entity-Ref-ID": f"{content.unique_timestamp}",
+            "Precedence": "bulk",
+            "Auto-Submitted": "auto-generated",
+            "X-Priority": "3"
         }
     }
     
@@ -751,7 +750,7 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
                        subject=content.subject,
                        phrase_id=content.phrase.id,
                        author=content.phrase.author,
-                       sender=dynamic_sender)
+                       sender=consistent_sender)
             # Respect rate limits
             time.sleep(config.throttle_seconds)
             return
