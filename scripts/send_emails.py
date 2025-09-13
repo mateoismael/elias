@@ -582,8 +582,8 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
         # Fallback simple para evitar errores
         subject = "Momento de reflexión"
     
-    # Obtener primer nombre del autor para la firma
-    author_first_name = phrase.author.split()[0]  # "Steve" de "Steve Jobs"
+    # Obtener nombre del autor
+    author_name = phrase.author  # "Steve Jobs"
     
     # Build HTML content - Ultra-minimalista (sin diseño visual)
     html = f"""<!DOCTYPE html>
@@ -592,24 +592,18 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:20px;font-family:Arial,sans-serif;line-height:1.6">
-
+<body>
 <p>{phrase.text}</p>
-
-<p>— {author_first_name}</p>
-
+<p>— {author_name}</p>
 <p><a href="https://pseudosapiens.com/preferences">Cambiar frecuencia</a> • <a href="https://pseudosapiens.com/unsubscribe">Desuscribirse</a></p>
-
-<!-- Timestamp invisible único para evitar agrupación en Gmail -->
 <div style="display:none">{unique_timestamp}</div>
-
 </body>
 </html>"""
 
     # Build text content - Ultra-minimalista
     text = f"""{phrase.text}
 
-{author_first_name}
+{author_name}
 
 ---
 Cambiar frecuencia: https://pseudosapiens.com/preferences
