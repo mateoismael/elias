@@ -16,20 +16,20 @@
   status = 301
   force = true
 
-# Specific clean URL mappings (these will be handled by the wildcard above, but keeping for clarity)
+# Specific clean URL mappings and optimized redirects
 [[redirects]]
   from = "/success"
-  to = "/success.html"
-  status = 200
+  to = "/dashboard"
+  status = 301
+
+[[redirects]]
+  from = "/preferences"
+  to = "/dashboard?tab=preferences"
+  status = 301
 
 [[redirects]]
   from = "/dashboard"
   to = "/dashboard.html"
-  status = 200
-
-[[redirects]]
-  from = "/preferences"
-  to = "/preferences.html"
   status = 200
 
 [[redirects]]

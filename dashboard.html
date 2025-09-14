@@ -892,6 +892,9 @@
 
             // Load user statistics and subscription data
             loadDashboardData();
+
+            // Check URL parameters for tab navigation
+            checkInitialTab();
         }
 
         function checkFirstVisit() {
@@ -1575,6 +1578,24 @@
         // Manual onboarding trigger (for testing or user request)
         function restartOnboarding() {
             showOnboarding();
+        }
+
+        // Check URL parameters for initial tab selection
+        function checkInitialTab() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const requestedTab = urlParams.get('tab');
+
+            if (requestedTab === 'preferences') {
+                // Auto-open preferences tab
+                setTimeout(() => {
+                    showTab('preferences');
+                }, 500);
+            } else if (requestedTab === 'stats') {
+                setTimeout(() => {
+                    showTab('stats');
+                }, 500);
+            }
+            // Default is 'overview' which is already active
         }
     </script>
 </body>

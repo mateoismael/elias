@@ -42,10 +42,8 @@ elias/
 │   ├── database_phrases.py           # Gestión de frases y anti-repetición
 │   └── smart_phrase_system.py        # Lógica de selección inteligente
 ├── index.html                        # Landing page de suscripción
-├── dashboard.html                    # Panel de control y estadísticas
-├── preferences.html                  # Gestión de preferencias de usuario
+├── dashboard.html                    # Panel de control centralizado (con tabs: overview, preferences, stats)
 ├── unsubscribe.html                  # Página de desuscripción
-├── success.html                      # Confirmación de suscripción
 ├── .env                             # Configuración de producción
 ├── requirements.txt                 # Dependencias Python
 └── netlify.toml                     # Configuración de despliegue
