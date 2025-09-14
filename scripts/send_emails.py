@@ -595,7 +595,7 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 <body>
 <p>{phrase.text}</p>
 <p>— {author_name}</p>
-<p><a href="https://pseudosapiens.com/preferences">Cambiar frecuencia</a> • <a href="https://pseudosapiens.com/unsubscribe">Desuscribirse</a></p>
+<p><a href="https://pseudosapiens.com/dashboard">Mi Dashboard</a> • <a href="https://pseudosapiens.com/unsubscribe">Desuscribirse</a></p>
 <div style="display:none">{unique_timestamp}</div>
 </body>
 </html>"""
@@ -606,7 +606,7 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 {author_name}
 
 ---
-Cambiar frecuencia: https://pseudosapiens.com/preferences
+Mi Dashboard: https://pseudosapiens.com/dashboard
 Desuscribirse: https://pseudosapiens.com/unsubscribe
 """
 
@@ -1048,7 +1048,7 @@ Pseudosapiens
 </p>
 
 <p style="margin:30px 0 0;font-size:12px;color:#999">
-<a href="https://pseudosapiens.com/preferences" style="color:#999">Cambiar frecuencia</a> • 
+<a href="https://pseudosapiens.com/dashboard" style="color:#999">Mi Dashboard</a> • 
 <a href="https://pseudosapiens.com/unsubscribe" style="color:#999">Desuscribirse</a>
 </p>
 
@@ -1097,7 +1097,7 @@ Un saludo,
 Pseudosapiens
 
 ---
-Cambiar frecuencia: https://pseudosapiens.com/preferences
+Mi Dashboard: https://pseudosapiens.com/dashboard
 Desuscribirse: https://pseudosapiens.com/unsubscribe
 
 """

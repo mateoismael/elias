@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Suscripción recibida</title>
+    <title>Redirigiendo a tu Dashboard</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -37,23 +37,35 @@
           color: #dbeafe;
         }
       }
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
+    <script>
+      // Auto-redirect to dashboard immediately
+      window.location.href = '/dashboard';
+    </script>
   </head>
   <body>
     <div class="box">
-      <h1>¡Bienvenido a Pseudosapiens!</h1>
+      <div class="loading"></div>
+      <h1>Redirigiendo a tu Dashboard...</h1>
       <p>
-        <strong>¡Tu suscripción está activa!</strong> Recibirás tu primera frase 
-        en la próxima hora de envío programada. Los emails se envían entre 
-        5:00 AM y 11:00 PM (hora de Perú) según la frecuencia elegida.
+        <strong>¡Tu suscripción está activa!</strong> Te estamos llevando a tu panel personal donde podrás gestionar tu experiencia.
       </p>
       <div class="tip-box">
-        <strong>Tip:</strong> Marca nuestros emails como "importantes" para mejor entrega.
+        <strong>Si no eres redirigido automáticamente:</strong> <a href="/dashboard" style="font-weight: 600;">Haz clic aquí</a>
       </div>
-      <p>
-        <a href="/preferences" style="font-weight: 600;">Cambiar frecuencia</a> • 
-        <a href="/">Volver al inicio</a>
-      </p>
     </div>
   </body>
 </html>

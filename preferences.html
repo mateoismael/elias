@@ -235,7 +235,8 @@
 
       <hr style="margin: 20px 0; opacity: 0.2" />
       <p>
-        <a href="/">← Volver al inicio</a>
+        <a href="/dashboard">← Volver al Dashboard</a> •
+        <a href="/">Inicio</a>
       </p>
     </main>
 
@@ -329,12 +330,9 @@
                 "success"
               );
 
-              // Optional: Redirect after success
+              // Redirect to dashboard after success
               setTimeout(() => {
-                const successUrl = `/success?email=${encodeURIComponent(
-                  email
-                )}&plan=${encodeURIComponent(planName)}`;
-                window.location.href = successUrl;
+                window.location.href = '/dashboard';
               }, 2000);
             } else {
               throw new Error(

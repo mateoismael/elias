@@ -208,8 +208,8 @@
 
         <div class="info-box">
           <strong>Tip:</strong> Si solo quieres recibir menos emails, puedes
-          <a href="/preferences" style="color: #6366f1; font-weight: 600"
-            >cambiar la frecuencia</a
+          <a href="/dashboard" style="color: #6366f1; font-weight: 600"
+            >gestionar tus preferencias</a
           >
           en lugar de desuscribirte completamente.
         </div>
@@ -463,16 +463,14 @@
       function goToPreferences() {
         const email = document.getElementById("email-input").value.trim();
         if (email) {
-          window.location.href = `/preferences?email=${encodeURIComponent(
-            email
-          )}`;
+          window.location.href = `/dashboard`;
         } else {
-          window.location.href = "/preferences";
+          window.location.href = "/dashboard";
         }
       }
 
       function goHome() {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     </script>
   </body>

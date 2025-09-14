@@ -479,7 +479,7 @@
         method="POST"
         data-netlify="true"
         netlify-honeypot="bot-field"
-        action="/success"
+        action="/dashboard"
       >
         <input type="hidden" name="form-name" value="subscribe" />
         <p hidden>
@@ -954,11 +954,9 @@
               console.log('Email user data saved for dashboard access');
             }
             
-            // Let the form submit normally to Netlify, but then redirect
-            setTimeout(() => {
-              // Redirect to dashboard after a short delay
-              window.location.href = '/dashboard';
-            }, 1000);
+            // Redirect to dashboard instead of success page
+            // The form will still submit to Netlify, but user goes to dashboard
+            window.location.href = '/dashboard';
           });
         }
       }
