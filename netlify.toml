@@ -36,3 +36,30 @@
   from = "/unsubscribe"
   to = "/unsubscribe.html"
   status = 200
+
+# Izipay payment routes - Corregido Sept 2025
+[[redirects]]
+  from = "/payment/success"
+  to = "/payment-success.html"
+  status = 200
+
+[[redirects]]
+  from = "/payment/failed"
+  to = "/payment-failed.html"
+  status = 200
+
+# Single webhook endpoint (elimina duplicación)
+[[redirects]]
+  from = "/payment/callback/test"
+  to = "/.netlify/functions/webhook_handler"
+  status = 200
+
+[[redirects]]
+  from = "/payment/callback/production"
+  to = "/.netlify/functions/webhook_handler"
+  status = 200
+
+[[redirects]]
+  from = "/webhook/izipay_webhook"
+  to = "/.netlify/functions/webhook_handler"
+  status = 200
