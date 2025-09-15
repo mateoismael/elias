@@ -1,0 +1,24 @@
+{
+  "name": "pseudosapiens-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Pseudosapiens payment processing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "netlify",
+    "functions",
+    "izipay",
+    "payments",
+    "supabase"
+  ],
+  "author": "Pseudosapiens",
+  "license": "MIT"
+}
