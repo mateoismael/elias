@@ -4,6 +4,10 @@
 [build]
   command = ""
   publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  directory = "netlify/functions"
 
 # =====================================================
 # CLEAN URLs - SEO OPTIMIZED (2025 BEST PRACTICES)
