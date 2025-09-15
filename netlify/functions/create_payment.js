@@ -41,6 +41,17 @@ exports.handler = async (event, context) => {
     const testMode = (process.env.IZIPAY_TEST_MODE || 'true').toLowerCase() === 'true';
     const apiUrl = process.env.IZIPAY_API_URL || 'https://api.micuentaweb.pe';
     
+    // Debug: Log environment variables (without sensitive data)
+    console.log('Environment check:', {
+      shopId: shopId,
+      testMode: testMode,
+      apiUrl: apiUrl,
+      hasTestPassword: !!process.env.IZIPAY_TEST_PASSWORD,
+      hasProdPassword: !!process.env.IZIPAY_PROD_PASSWORD,
+      hasTestKey: !!process.env.IZIPAY_PUBLIC_TEST_KEY,
+      hasProdKey: !!process.env.IZIPAY_PUBLIC_PROD_KEY
+    });
+    
     // Credentials based on mode
     const password = testMode 
       ? process.env.IZIPAY_TEST_PASSWORD 
@@ -55,7 +66,12 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify({ 
           error: 'Missing Izipay credentials',
-          mode: testMode ? 'test' : 'production'
+          mode: testMode ? 'test' : 'production',
+          debug: {
+            hasPassword: !!password,
+            hasPublicKey: !!publicKey,
+            shopId: shopId
+          }
         })
       };
     }
@@ -78,69 +94,29 @@ exports.handler = async (event, context) => {
     // Generate unique order ID
     const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create payment data
-    const paymentData = {
-      amount: selectedPlan.amount * 100, // Convert to cents
-      currency: selectedPlan.currency,
+    // For now, return a mock success response to test the frontend
+    // TODO: Implement actual Izipay API call once credentials are confirmed
+    console.log('Mock payment creation for:', {
+      plan: plan,
       orderId: orderId,
-      customer: {
-        email: requestData.email || 'test@pseudosapiens.com'
-      },
-      customData: {
-        plan: plan,
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    // Create HMAC signature for authentication
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = crypto.randomBytes(16).toString('hex');
-    
-    // Create signature string
-    const signatureString = `POST\n${apiUrl}/api-payment/V4/Charge/CreatePayment\n${JSON.stringify(paymentData)}\n${timestamp}\n${nonce}`;
-    const signature = crypto.createHmac('sha256', password).update(signatureString).digest('base64');
-
-    // Make request to Izipay API
-    const response = await fetch(`${apiUrl}/api-payment/V4/Charge/CreatePayment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${shopId}:${password}`).toString('base64')}`,
-        'X-Timestamp': timestamp,
-        'X-Nonce': nonce,
-        'X-Signature': signature
-      },
-      body: JSON.stringify(paymentData)
+      testMode: testMode
     });
 
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify({
-          error: 'Izipay API error',
-          details: responseData,
-          testMode: testMode
-        })
-      };
-    }
-
-    // Return successful response with token and public key
+    // Return mock successful response
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        token: responseData.answer?.formToken || responseData.formToken,
+        token: `mock_token_${Date.now()}`, // Mock token for testing
         publicKey: publicKey,
         orderId: orderId,
         amount: selectedPlan.amount,
         currency: selectedPlan.currency,
         description: selectedPlan.description,
         testMode: testMode,
-        shopId: shopId
+        shopId: shopId,
+        mock: true // Indicates this is a mock response
       })
     };
 
