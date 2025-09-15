@@ -1,0 +1,10 @@
+# Netlify Functions requirements
+# Core dependencies for payment processing
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Supabase integration
+supabase>=2.0.0
+
+# Date/time handling
+python-dateutil>=2.8.0
