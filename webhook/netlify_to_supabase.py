@@ -220,29 +220,17 @@ def validate_netlify_webhook(data: Dict[str, Any]) -> bool:
     return True
 
 def map_frequency_to_plan_id(frequency: str) -> int:
-    """Mapear frecuencia a plan_id - MODELO OPTIMIZADO 2025 (Deliverability-Safe)"""
-    # NUEVO MODELO 2025 (Plan ID = Emails por día):
+    """Mapear frecuencia a plan_id - MODELO SIMPLIFICADO 2025"""
+    # PLANES ACTIVOS:
     # Plan 0 = GRATUITO (3/semana L-M-V) - S/ 0.00
-    # Plan 1 = PREMIUM 1/día (24h) - S/ 5.00
-    # Plan 2 = PREMIUM 2/día (12h) - S/ 5.00  
-    # Plan 3 = PREMIUM 3/día (8h) - S/ 5.00
-    # Plan 4 = PREMIUM 4/día (6h) - S/ 5.00
-    # Plan 13 = PREMIUM Power User 13/día (1h) - OCULTO/MANUAL
+    # Plan 1 = PREMIUM BÁSICO 1/día (24h) - S/ 5.00
     
     frequency_str = str(frequency)
     
     if frequency_str == 'weekly-3' or frequency_str == '56':
         plan_id = 0  # Plan gratuito (3/semana L-M-V)
     elif frequency_str == '1-daily' or frequency_str == '24':
-        plan_id = 1  # Premium 1/día
-    elif frequency_str == '2-daily' or frequency_str == '12':
-        plan_id = 2  # Premium 2/día
-    elif frequency_str == '3-daily' or frequency_str == '8':
-        plan_id = 3  # Premium 3/día
-    elif frequency_str == '4-daily' or frequency_str == '6':
-        plan_id = 4  # Premium 4/día
-    elif frequency_str == '1':
-        plan_id = 13  # Premium Power User (13/día - solo manual/VIP)
+        plan_id = 1  # Premium básico 1/día
     else:
         # Default a plan gratuito para frecuencias no reconocidas
         plan_id = 0
@@ -767,4 +755,188 @@ def handle_google_signin():
         })
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response, 500
+
+
+@app.route('/webhook/update-plan', methods=['POST', 'OPTIONS'])
+def handle_update_plan():
+    """Endpoint para actualizar el plan de un usuario existente"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        return response
+    
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        new_frequency = data.get('frequency', 'weekly-3')
+        
+        if not email:
+            return jsonify({
+                'status': 'error',
+                'message': 'Email requerido'
+            }), 400
+        
+        if '@' not in email:
+            return jsonify({
+                'status': 'error',
+                'message': 'Email inválido'
+            }), 400
+        
+        logger.info("Processing plan update request", email=email, new_frequency=new_frequency)
+        
+        # Conectar a Supabase
+        supabase = get_supabase()
+        
+        # Verificar si el usuario existe
+        user = get_user_by_email(supabase, email)
+        if not user:
+            return jsonify({
+                'status': 'error',
+                'message': 'Usuario no encontrado'
+            }), 404
+        
+        # Mapear frequency a plan_id
+        plan_id = map_frequency_to_plan_id(new_frequency)
+        
+        # Cancelar suscripciones existentes
+        cancel_existing_subscriptions(supabase, user['id'])
+        
+        # Crear nueva suscripción con el nuevo plan
+        subscription_created = create_or_update_subscription(supabase, user['id'], plan_id)
+        
+        if subscription_created:
+            logger.info("Plan updated successfully", email=email, user_id=user['id'], new_plan=new_frequency)
+            return jsonify({
+                'status': 'success',
+                'message': 'Plan actualizado exitosamente',
+                'user': {
+                    'email': user['email'],
+                    'name': user['name'],
+                    'current_plan': new_frequency
+                }
+            })
+        else:
+            logger.warning("Failed to update plan", email=email, user_id=user['id'])
+            return jsonify({
+                'status': 'error',
+                'message': 'Error al actualizar el plan'
+            }), 500
+            
+    except Exception as e:
+        logger.error("Plan update processing failed", error=str(e), exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Error interno del servidor'
+        }), 500
+
+
+@app.route('/webhook/user-data', methods=['POST', 'OPTIONS'])
+def handle_get_user_data():
+    """Endpoint para obtener datos del usuario (plan actual, contador de frases)"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        return response
+    
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({
+                'status': 'error',
+                'message': 'Email requerido'
+            }), 400
+        
+        if '@' not in email:
+            return jsonify({
+                'status': 'error',
+                'message': 'Email inválido'
+            }), 400
+        
+        logger.info("Getting user data", email=email)
+        
+        # Conectar a Supabase
+        supabase = get_supabase()
+        
+        # Obtener usuario
+        user = get_user_by_email(supabase, email)
+        if not user:
+            return jsonify({
+                'status': 'error',
+                'message': 'Usuario no encontrado'
+            }), 404
+        
+        # Obtener suscripción activa
+        try:
+            subscription_response = supabase.table('subscriptions')\
+                .select('*, subscription_plans!inner(*)')\
+                .eq('user_id', user['id'])\
+                .eq('status', 'active')\
+                .order('started_at', desc=True)\
+                .limit(1)\
+                .execute()
+            
+            current_plan = "weekly-3"  # Default
+            if subscription_response.data:
+                freq_hours = subscription_response.data[0]['subscription_plans']['frequency_hours']
+                if freq_hours == 24:
+                    current_plan = "1-daily"
+                elif freq_hours == 56:
+                    current_plan = "weekly-3"
+        
+        except Exception as e:
+            logger.warning("Could not get subscription data", error=str(e))
+            current_plan = "weekly-3"
+        
+        # Obtener contador de emails enviados (simplificado)
+        try:
+            # En lugar de consultar email_logs, usamos un contador aproximado
+            # basado en la fecha de creación del usuario
+            from datetime import datetime, timedelta
+            
+            user_created = datetime.fromisoformat(user['created_at'].replace('Z', '+00:00'))
+            days_since_creation = (datetime.now().replace(tzinfo=user_created.tzinfo) - user_created).days
+            
+            # Estimación aproximada basada en el plan
+            if current_plan == "1-daily":
+                estimated_emails = min(days_since_creation, days_since_creation)
+            else:  # weekly-3
+                estimated_emails = min(days_since_creation * 3 // 7, days_since_creation)
+            
+            phrases_count = max(1, estimated_emails)  # Mínimo 1
+            
+        except Exception as e:
+            logger.warning("Could not calculate phrases count", error=str(e))
+            phrases_count = 1
+        
+        logger.info("User data retrieved successfully", email=email, plan=current_plan, count=phrases_count)
+        
+        return jsonify({
+            'status': 'success',
+            'user': {
+                'email': user['email'],
+                'name': user['name'],
+                'current_plan': current_plan,
+                'phrases_count': phrases_count,
+                'created_at': user['created_at']
+            }
+        })
+            
+    except Exception as e:
+        logger.error("Get user data processing failed", error=str(e), exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Error interno del servidor'
+        }), 500
 
