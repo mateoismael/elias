@@ -516,9 +516,9 @@ def get_user_subscription():
         response.headers['Access-Control-Allow-Origin'] = '*'
         return response, 500
 
-@app.route('/unsubscribe', methods=['POST', 'OPTIONS'])
+@app.route('/webhook/unsubscribe', methods=['POST', 'OPTIONS'])
 def handle_unsubscribe():
-    """Endpoint para procesar desuscripciones desde unsubscribe.html"""
+    """Endpoint para procesar desuscripciones desde Dashboard y unsubscribe.html"""
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
