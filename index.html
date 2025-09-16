@@ -513,39 +513,26 @@
             <span class="step-text">Recibirás <strong>3 frases por semana</strong> (Lunes, Miércoles, Viernes a las 8:00)</span>
           </div>
           <div class="step">
-            <span class="step-icon">🎯</span>
-            <span class="step-text">Acceso a tu <strong>dashboard personal</strong> para gestionar tus preferencias</span>
+            <span class="step-icon">💼</span>
+            <span class="step-text">Acceso a tu <strong>dashboard personal</strong> para gestionar preferencias</span>
           </div>
           <div class="step">
             <span class="step-icon">🔐</span>
-            <span class="step-text">100% seguro con Google - <strong>sin spam, cancela cuando quieras</strong></span>
+            <span class="step-text">Registro seguro con Google - <strong>cancela cuando quieras</strong></span>
           </div>
         </div>
       </div>
 
       <!-- Google Sign-In Button Mejorado 2025 -->
       <div class="google-signin-container">
-        <div id="g_id_signin"
-             data-type="standard"
-             data-shape="pill"
-             data-theme="filled_blue"
-             data-text="continue_with"
-             data-size="large"
-             data-logo_alignment="left"
-             data-width="280"
-             data-use_fedcm_for_button="true">
+        <div id="g_id_signin"></div>
+        <div id="google-loading" style="text-align: center; padding: 12px;">
+          <p style="color: #6366f1;">🔄 Cargando Google Sign-In...</p>
         </div>
       </div>
       
       <p class="signup-disclaimer">
-        Al registrarte, aceptas recibir frases motivacionales. 
-        <strong>Sin spam</strong> - puedes cancelar en cualquier momento desde tu dashboard.
-      </p>
-
-      <hr style="margin: 20px 0; opacity: 0.2" />
-      <p>
-        <strong>Privacidad:</strong> Solo usamos tu correo para enviarte frases.
-        No compartimos tu información.
+        Al registrarte, aceptas recibir frases motivacionales. Puedes cancelar en cualquier momento.
       </p>
     </main>
 
@@ -556,125 +543,98 @@
         <button class="modal-close" onclick="closeExitModal()" aria-label="Cerrar modal">&times;</button>
         
         <h2 id="modal-title">¡Espera! Una última oportunidad</h2>
-        <p>Únete a <strong>más de 1,200 personas</strong> que ya reciben frases motivacionales</p>
+        <p>Únete a <strong>más de 1,200 personas</strong> que ya mejoran su inglés profesional</p>
         
         <div class="google-signin-exit">
-          <div id="g_id_signin_exit"
-               data-type="standard"
-               data-shape="pill"
-               data-theme="filled_blue"
-               data-text="continue_with"
-               data-size="large"
-               data-width="280">
-          </div>
+          <div id="g_id_signin_exit"></div>
         </div>
         
-        <small>3 frases por semana (L-M-V) • Sin spam • Cancela cuando quieras</small>
+        <small>3 frases por semana • Registro con Google</small>
       </div>
     </div>
 
     <script>
-      // Modern form validation 2025
-      const form = document.querySelector('form[name="subscribe"]');
-      const emailInput = document.getElementById('email');
-      const submitButton = form.querySelector('button[type="submit"]');
-      const frequencySelect = document.getElementById('frequency');
-      
-      // Inline email validation
-      function validateEmail(email) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
-      }
-      
-      function showFieldError(input, message) {
-        // Remove existing error
-        const existingError = input.parentNode.querySelector('.field-error');
-        if (existingError) existingError.remove();
+      // Google Sign-In Handler
+      function handleGoogleSignIn(response) {
+        console.log('Google Sign-In successful:', response);
         
-        // Add error message
-        const error = document.createElement('small');
-        error.className = 'field-error';
-        error.id = `${input.id}-error`;
-        error.setAttribute('aria-live', 'polite');
-        error.style.cssText = 'color: #dc2626; font-size: 0.875rem; margin-top: 4px; display: block;';
-        error.textContent = message;
-        input.parentNode.appendChild(error);
-        input.style.borderColor = '#dc2626';
+        // Handle both popup and redirect responses
+        let credential = response.credential || response;
         
-        // Update ARIA attributes
-        input.setAttribute('aria-invalid', 'true');
-        input.setAttribute('aria-describedby', `${input.id}-help ${input.id}-error`);
-      }
-      
-      function clearFieldError(input) {
-        const existingError = input.parentNode.querySelector('.field-error');
-        if (existingError) existingError.remove();
-        input.style.borderColor = '#7775';
-        
-        // Update ARIA attributes
-        input.setAttribute('aria-invalid', 'false');
-        input.setAttribute('aria-describedby', `${input.id}-help`);
-      }
-      
-      // Real-time email validation
-      emailInput.addEventListener('input', function() {
-        const email = this.value.trim();
-        
-        if (!email) {
-          clearFieldError(this);
+        // Check if we have a valid credential
+        if (!credential || typeof credential !== 'string') {
+          console.error('Invalid Google credential received:', response);
+          alert('Error al iniciar sesión con Google. Intenta de nuevo.');
           return;
         }
         
-        if (!validateEmail(email)) {
-          showFieldError(this, 'Ingresa un email válido (ej: tu@email.com)');
-        } else {
-          clearFieldError(this);
-        }
-      });
-      
-      // Form submission with validation
-      form.addEventListener('submit', function(e) {
-        const email = emailInput.value.trim();
-        let hasErrors = false;
-        
-        // Validate email
-        if (!email) {
-          showFieldError(emailInput, 'El email es requerido');
-          hasErrors = true;
-        } else if (!validateEmail(email)) {
-          showFieldError(emailInput, 'Ingresa un email válido');
-          hasErrors = true;
-        }
-        
-        if (hasErrors) {
-          e.preventDefault();
-          emailInput.focus();
-          return false;
-        }
-        
         // Show loading state
-        submitButton.textContent = 'Procesando...';
-        submitButton.disabled = true;
+        const googleContainer = document.querySelector('.google-signin-container');
+        const originalContent = googleContainer.innerHTML;
+        googleContainer.innerHTML = '<p style="color: #6366f1; font-weight: 500;">✨ Registrando tu cuenta...</p>';
         
-        // Let form submit naturally to Netlify
-        return true;
-      });
+        // Send credential to webhook
+        fetch('https://elias-webhook.vercel.app/webhook/google-signin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            credential: credential,
+            frequency: 'weekly-3' // Default to free plan
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Save user data to localStorage for dashboard access
+            const userData = {
+              id: data.user.id,
+              email: data.user.email,
+              name: data.user.name,
+              auth_method: data.user.auth_method,
+              avatar_url: data.user.avatar_url || null
+            };
+            localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
+            
+            // Show success message before redirect
+            googleContainer.innerHTML = '<p style="color: #059669; font-weight: 500;">🎉 ¡Registro exitoso! Redirigiendo...</p>';
+            
+            // Redirect to dashboard
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 1500);
+          } else {
+            throw new Error(data.error || 'Authentication failed');
+          }
+        })
+        .catch(error => {
+          console.error('Google Sign-In error:', error);
+          googleContainer.innerHTML = '<p style="color: #dc2626; font-size: 0.9rem;">❌ Error al registrarse. <button onclick="location.reload()" style="color: #6366f1; text-decoration: underline; background: none; border: none; cursor: pointer;">Intentar de nuevo</button></p>';
+        });
+      }
       
-      // Focus enhancement
-      emailInput.addEventListener('focus', function() {
-        this.style.borderColor = '#6366f1';
-      });
-      
-      emailInput.addEventListener('blur', function() {
-        if (!this.value.trim() || validateEmail(this.value.trim())) {
-          this.style.borderColor = '#7775';
+      // Check if user is already authenticated and redirect to dashboard
+      function checkAuthenticationAndRedirect() {
+        const userData = localStorage.getItem('pseudosapiens_user');
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            if (user.email) {
+              console.log('User already authenticated, redirecting to dashboard');
+              window.location.href = '/dashboard';
+              return true;
+            }
+          } catch (e) {
+            // Invalid user data, remove it
+            localStorage.removeItem('pseudosapiens_user');
+          }
         }
-      });
-
+        return false;
+      }
       
-      // Exit Intent Detection
+      // Exit Intent Detection (simplificado)
       let exitIntentTriggered = false;
-      let inactivityTimer = null;
       let hasScrolled = false;
       
       function showExitIntentModal() {
@@ -682,148 +642,45 @@
         
         exitIntentTriggered = true;
         const modal = document.getElementById('exit-intent-modal');
-        const exitEmail = document.getElementById('exit-email');
         
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
         
-        // Focus management for accessibility
-        exitEmail.focus();
+        // Render Google button in exit modal
+        if (typeof google !== 'undefined' && google.accounts) {
+          google.accounts.id.renderButton(
+            document.getElementById('g_id_signin_exit'),
+            {
+              type: 'standard',
+              shape: 'pill',
+              theme: 'filled_blue',
+              text: 'continue_with',
+              size: 'large',
+              width: 280
+            }
+          );
+        }
         
-        // Trap focus in modal
-        modal.addEventListener('keydown', trapFocus);
-        
-        // Track analytics
-        console.log('Exit intent triggered');
+        console.log('Exit intent modal shown');
       }
       
       function closeExitModal() {
         const modal = document.getElementById('exit-intent-modal');
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
-        modal.removeEventListener('keydown', trapFocus);
       }
       
-      function trapFocus(e) {
-        if (e.key === 'Escape') {
-          closeExitModal();
-          return;
-        }
-        
-        if (e.key === 'Tab') {
-          const modal = document.getElementById('exit-intent-modal');
-          const focusableElements = modal.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
-          const firstElement = focusableElements[0];
-          const lastElement = focusableElements[focusableElements.length - 1];
-          
-          if (e.shiftKey && document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement.focus();
-          } else if (!e.shiftKey && document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-      
-      function submitExitIntent(event) {
-        event.preventDefault();
-        
-        const exitEmail = document.getElementById('exit-email');
-        const email = exitEmail.value.trim();
-        
-        if (!validateEmail(email)) {
-          exitEmail.style.borderColor = '#dc2626';
-          exitEmail.focus();
-          return false;
-        }
-        
-        // Submit to Netlify with free plan (3 per week)
-        const formData = new FormData();
-        formData.append('form-name', 'subscribe');
-        formData.append('email', email);
-        formData.append('frequency', 'weekly-3'); // New free plan (3 per week L-M-V)
-        
-        fetch('/', {
-          method: 'POST',
-          body: formData
-        }).then(() => {
-          // Show success message
-          const modal = document.getElementById('exit-intent-modal');
-          const content = modal.querySelector('.modal-content');
-          
-          content.innerHTML = `
-            <h2 style="color: #059669;">¡Perfecto!</h2>
-            <p>Te hemos suscrito para recibir <strong>3 frases por semana</strong> (L-M-V a las 8:00 AM).</p>
-            <p>Revisa tu email para confirmar.</p>
-            <button onclick="closeExitModal()" class="exit-cta" style="background: #059669 !important;">
-              Cerrar
-            </button>
-          `;
-          
-          // Auto-close after 3 seconds
-          setTimeout(closeExitModal, 3000);
-          
-        }).catch(() => {
-          exitEmail.style.borderColor = '#dc2626';
-          console.error('Exit intent submission failed');
-        });
-      }
-      
-      // Mouse leave detection (desktop)
+      // Simple exit intent triggers
       document.addEventListener('mouseleave', function(e) {
         if (e.clientY < 0 && !exitIntentTriggered && hasScrolled) {
           showExitIntentModal();
         }
       });
       
-      // Mobile touch detection (swipe up)
-      let touchStartY = 0;
-      document.addEventListener('touchstart', function(e) {
-        touchStartY = e.touches[0].clientY;
-      });
-      
-      document.addEventListener('touchend', function(e) {
-        const touchEndY = e.changedTouches[0].clientY;
-        const swipeDistance = touchStartY - touchEndY;
-        
-        // Swipe up fast (exit-like behavior on mobile)
-        if (swipeDistance > 100 && !exitIntentTriggered && hasScrolled) {
-          showExitIntentModal();
-        }
-      });
-      
-      // Track scroll activity
-      let scrollTimer = null;
+      // Track scroll for exit intent
       document.addEventListener('scroll', function() {
         hasScrolled = true;
-        
-        // Clear existing timer
-        if (scrollTimer) {
-          clearTimeout(scrollTimer);
-        }
-        
-        // Set inactivity timer after scroll stops
-        scrollTimer = setTimeout(() => {
-          if (!exitIntentTriggered && hasScrolled) {
-            // Show after 30 seconds of inactivity
-            inactivityTimer = setTimeout(showExitIntentModal, 30000);
-          }
-        }, 2000);
-      });
-      
-      // Prevent exit intent if user is actively engaging with form
-      const mainForm = document.querySelector('form[name="subscribe"]');
-      mainForm.addEventListener('focus', function() {
-        if (inactivityTimer) {
-          clearTimeout(inactivityTimer);
-        }
-      }, true);
-      
-      // Don't show exit intent if main form was submitted
-      mainForm.addEventListener('submit', function() {
-        exitIntentTriggered = true;
-      });
+      }, { passive: true });
       
       // Animate metrics on load for social proof
       function animateNumber(element, start, end, duration = 2000) {
@@ -868,83 +725,6 @@
         }, 500);
       });
       
-      // Google Sign-In Handler
-      function handleGoogleSignIn(response) {
-        console.log('Google Sign-In successful:', response);
-        
-        // Handle both popup and redirect responses
-        let credential = response.credential || response;
-        
-        // Check if we have a valid credential
-        if (!credential || typeof credential !== 'string') {
-          console.error('Invalid Google credential received:', response);
-          alert('Error al iniciar sesión con Google. Intenta de nuevo.');
-          return;
-        }
-        
-        // Show loading state
-        const googleContainer = document.querySelector('.google-signin-container');
-        const originalContent = googleContainer.innerHTML;
-        googleContainer.innerHTML = '<p>Procesando con Google...</p>';
-        
-        // Send credential to webhook
-        fetch('https://elias-webhook.vercel.app/webhook/google-signin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            credential: credential,
-            frequency: 'weekly-3' // Default to free plan
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            // Save user data to localStorage for dashboard access
-            const userData = {
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.name,
-              auth_method: data.user.auth_method,
-              avatar_url: data.user.avatar_url || null
-            };
-            localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
-            
-            // Redirect to dashboard instead of success page
-            console.log('User authenticated successfully, redirecting to dashboard');
-            window.location.href = '/dashboard';
-          } else {
-            throw new Error(data.error || 'Authentication failed');
-          }
-        })
-        .catch(error => {
-          console.error('Google Sign-In error:', error);
-          alert('Error al registrarse con Google. Por favor intenta con email.');
-          googleContainer.innerHTML = originalContent;
-        });
-      }
-      
-      
-      // Check if user is already authenticated and redirect to dashboard
-      function checkAuthenticationAndRedirect() {
-        const userData = localStorage.getItem('pseudosapiens_user');
-        if (userData) {
-          try {
-            const user = JSON.parse(userData);
-            if (user.email) {
-              console.log('User already authenticated, redirecting to dashboard');
-              window.location.href = '/dashboard';
-              return true;
-            }
-          } catch (e) {
-            // Invalid user data, remove it
-            localStorage.removeItem('pseudosapiens_user');
-          }
-        }
-        return false;
-      }
-      
       // Initialize Google Sign-In when page loads (Updated 2025 with FedCM)
       window.onload = function() {
         // Check authentication first
@@ -978,9 +758,19 @@
             }
           );
           
+          // Hide loading message
+          const loadingDiv = document.getElementById('google-loading');
+          if (loadingDiv) loadingDiv.style.display = 'none';
+          
           console.log('Google Sign-In button rendered successfully with FedCM');
         } else {
           console.error('Google Identity Services not loaded');
+          
+          // Show fallback message if Google doesn't load
+          const loadingDiv = document.getElementById('google-loading');
+          if (loadingDiv) {
+            loadingDiv.innerHTML = '<p style="color: #dc2626;">❌ Error cargando Google Sign-In. <button onclick="location.reload()" style="color: #6366f1; text-decoration: underline; background: none; border: none; cursor: pointer;">Recargar página</button></p>';
+          }
         }
       };
     </script>
