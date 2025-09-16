@@ -899,25 +899,16 @@ def handle_get_user_data():
             logger.warning("Could not get subscription data", error=str(e))
             current_plan = "weekly-3"
         
-        # Obtener contador de emails enviados (simplificado)
+        # Obtener contador REAL de emails enviados desde la tabla users
         try:
-            # En lugar de consultar email_logs, usamos un contador aproximado
-            # basado en la fecha de creación del usuario
-            from datetime import datetime, timedelta
+            phrases_count = user.get('total_emails_sent', 0)
             
-            user_created = datetime.fromisoformat(user['created_at'].replace('Z', '+00:00'))
-            days_since_creation = (datetime.now().replace(tzinfo=user_created.tzinfo) - user_created).days
-            
-            # Estimación aproximada basada en el plan
-            if current_plan == "1-daily":
-                estimated_emails = min(days_since_creation, days_since_creation)
-            else:  # weekly-3
-                estimated_emails = min(days_since_creation * 3 // 7, days_since_creation)
-            
-            phrases_count = max(1, estimated_emails)  # Mínimo 1
-            
+            # Asegurar que al menos muestre 1 si hay datos
+            if phrases_count == 0:
+                phrases_count = 1  # Mínimo 1 para mostrar en el dashboard
+                
         except Exception as e:
-            logger.warning("Could not calculate phrases count", error=str(e))
+            logger.warning("Could not get total_emails_sent from user", error=str(e))
             phrases_count = 1
         
         logger.info("User data retrieved successfully", email=email, plan=current_plan, count=phrases_count)
