@@ -4,6 +4,11 @@ import { GoogleSignIn } from './landing/GoogleSignIn';
 export function LandingPage() {
   // Check if user is already authenticated
   useEffect(() => {
+    // Don't redirect if we're on unsubscribe page
+    if (window.location.pathname === '/unsubscribe') {
+      return;
+    }
+    
     const userData = localStorage.getItem('pseudosapiens_user');
     if (userData) {
       try {
