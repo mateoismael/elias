@@ -27,11 +27,6 @@
   to = "/dashboard?tab=preferences"
   status = 301
 
-[[redirects]]
-  from = "/dashboard"
-  to = "/dashboard.html"
-  status = 200
-
 # SPA routing - catch all routes and serve index.html for React Router
 [[redirects]]
   from = "/*"
