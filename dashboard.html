@@ -217,67 +217,6 @@
             background: #dc2626;
         }
         
-        /* Progress Bar */
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: var(--bg-secondary);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        
-        /* Recent Activity */
-        .activity-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
-        .activity-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--bg-secondary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-        
-        .activity-content {
-            flex: 1;
-        }
-        
-        .activity-text {
-            margin: 0;
-            font-size: 0.875rem;
-        }
-        
-        .activity-time {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-        }
-        
         /* Loading States */
         .loading {
             opacity: 0.6;
@@ -608,9 +547,6 @@
             <button class="tab-btn" onclick="showTab('preferences')">
                 ⚙️ Preferencias
             </button>
-            <button class="tab-btn" onclick="showTab('stats')">
-                📊 Estadísticas
-            </button>
         </nav>
 
         <!-- Overview Tab (Default Dashboard) -->
@@ -625,11 +561,6 @@
                 </div>
                 <div class="stat-number" id="totalPhrases">-</div>
                 <p class="stat-label">Frases motivacionales recibidas</p>
-                
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-                <p class="stat-label">Progreso este mes</p>
             </div>
 
             <!-- Plan Actual -->
@@ -666,24 +597,6 @@
                 <button class="btn btn-secondary" onclick="showSettings()">
                     Modificar Configuración
                 </button>
-            </div>
-
-            <!-- Actividad Reciente -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        📬 Actividad Reciente
-                    </h2>
-                </div>
-                <ul class="activity-list" id="recentActivity">
-                    <li class="activity-item">
-                        <div class="activity-icon">💭</div>
-                        <div class="activity-content">
-                            <p class="activity-text">Cargando actividad...</p>
-                            <span class="activity-time">-</span>
-                        </div>
-                    </li>
-                </ul>
             </div>
             </div>
         </div>
@@ -747,45 +660,6 @@
                     <button class="btn btn-danger" onclick="unsubscribeFromDashboard()">
                         🗑️ Desuscribirse Completamente
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Statistics Tab -->
-        <div id="tab-stats" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">📊 Estadísticas Detalladas</h2>
-                </div>
-
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <h3>📈 Este Mes</h3>
-                        <div class="stat-number" id="stats-month">-</div>
-                        <p class="stat-label">Frases recibidas en el mes actual</p>
-                    </div>
-
-                    <div class="card">
-                        <h3>🎯 Total Histórico</h3>
-                        <div class="stat-number" id="stats-total">-</div>
-                        <p class="stat-label">Total de frases desde que te uniste</p>
-                    </div>
-
-                    <div class="card">
-                        <h3>📅 Días Activo</h3>
-                        <div class="stat-number" id="stats-days">-</div>
-                        <p class="stat-label">Días desde tu registro</p>
-                    </div>
-
-                    <div class="card">
-                        <h3>⭐ Plan Actual</h3>
-                        <div class="stat-number" id="stats-plan">Gratuito</div>
-                        <p class="stat-label">Tu suscripción actual</p>
-                    </div>
-                </div>
-
-                <div class="info-box" style="margin-top: 2rem;">
-                    <strong>💡 ¿Sabías que?</strong> Los usuarios Premium reciben hasta 4 frases motivacionales personalizadas por día, adaptadas a diferentes momentos del día para máximo impacto.
                 </div>
             </div>
         </div>
@@ -1031,14 +905,12 @@
                     const data = await response.json();
                     updateSubscriptionUI(data);
                     updateUserStatsUI(data.user_stats);
-                    loadRecentActivity(data.user_stats, data);
                 } else {
                     // Default to free plan
                     const defaultData = { plan_id: 0 };
                     const defaultStats = { total_emails_sent: 0, last_email_sent_at: null, member_since: null };
                     updateSubscriptionUI(defaultData);
                     updateUserStatsUI(defaultStats);
-                    loadRecentActivity(defaultStats, defaultData);
                 }
             } catch (error) {
                 console.error('Error loading subscription:', error);
@@ -1046,7 +918,6 @@
                 const defaultStats = { total_emails_sent: 0, last_email_sent_at: null, member_since: null };
                 updateSubscriptionUI(defaultData);
                 updateUserStatsUI(defaultStats);
-                loadRecentActivity(defaultStats, defaultData);
             }
         }
         
@@ -1111,96 +982,6 @@
             }
             
             userSubscription = subscriptionData;
-        }
-        
-        function loadRecentActivity(userStats, subscriptionData) {
-            try {
-                const activities = [];
-                
-                // Add last email sent activity if available
-                if (userStats && userStats.last_email_sent_at) {
-                    const lastSent = new Date(userStats.last_email_sent_at);
-                    const timeAgo = getTimeAgo(lastSent);
-                    activities.push({
-                        icon: '💭',
-                        text: 'Frase motivacional enviada',
-                        time: timeAgo
-                    });
-                }
-                
-                // Add subscription activity if premium
-                if (subscriptionData && subscriptionData.plan_id > 0) {
-                    activities.push({
-                        icon: '⭐',
-                        text: 'Upgrade a Premium',
-                        time: 'Reciente'
-                    });
-                }
-                
-                // Add member since activity
-                if (userStats && userStats.member_since) {
-                    const memberDate = new Date(userStats.member_since);
-                    const timeAgo = getTimeAgo(memberDate);
-                    activities.push({
-                        icon: '✨',
-                        text: 'Te uniste a Pseudosapiens',
-                        time: timeAgo
-                    });
-                }
-                
-                // If no activities, show default
-                if (activities.length === 0) {
-                    activities.push({
-                        icon: '🎯',
-                        text: 'Dashboard configurado',
-                        time: 'Ahora'
-                    });
-                }
-                
-                const activityList = document.getElementById('recentActivity');
-                activityList.innerHTML = activities.map(activity => `
-                    <li class="activity-item">
-                        <div class="activity-icon">${activity.icon}</div>
-                        <div class="activity-content">
-                            <p class="activity-text">${activity.text}</p>
-                            <span class="activity-time">${activity.time}</span>
-                        </div>
-                    </li>
-                `).join('');
-                
-            } catch (error) {
-                console.error('Error loading recent activity:', error);
-                // Fallback to simple message
-                document.getElementById('recentActivity').innerHTML = `
-                    <li class="activity-item">
-                        <div class="activity-icon">📊</div>
-                        <div class="activity-content">
-                            <p class="activity-text">Dashboard cargado</p>
-                            <span class="activity-time">Ahora</span>
-                        </div>
-                    </li>
-                `;
-            }
-        }
-        
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffMs = now - date;
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 0) {
-                return 'Hoy';
-            } else if (diffDays === 1) {
-                return 'Ayer';
-            } else if (diffDays < 7) {
-                return `Hace ${diffDays} días`;
-            } else if (diffDays < 30) {
-                const weeks = Math.floor(diffDays / 7);
-                return `Hace ${weeks} semana${weeks > 1 ? 's' : ''}`;
-            } else {
-                const months = Math.floor(diffDays / 30);
-                return `Hace ${months} mes${months > 1 ? 'es' : ''}`;
-            }
         }
         
         function showNextPhrase() {
@@ -1589,10 +1370,6 @@
                 // Auto-open preferences tab
                 setTimeout(() => {
                     showTab('preferences');
-                }, 500);
-            } else if (requestedTab === 'stats') {
-                setTimeout(() => {
-                    showTab('stats');
                 }, 500);
             }
             // Default is 'overview' which is already active
