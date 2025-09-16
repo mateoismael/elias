@@ -15,7 +15,6 @@ export function Dashboard() {
   const [isChangingPlan, setIsChangingPlan] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState<string | null>(null);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
-  const [isUnsubscribing, setIsUnsubscribing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadUserData = async (email: string) => {
@@ -110,39 +109,13 @@ export function Dashboard() {
     }
   };
 
-  const handleUnsubscribe = async () => {
+  const handleUnsubscribe = () => {
     if (!user?.email) return;
 
-    setIsUnsubscribing(true);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/webhook/unsubscribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: user.email }),
-        }
-      );
-
-      if (response.ok) {
-        // Clear user session since they're no longer subscribed
-        localStorage.removeItem("pseudosapiens_user");
-        // Redirect to unsubscribe success page
-        window.history.pushState({}, "", `/unsubscribe?email=${user.email}`);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      } else {
-        throw new Error("Failed to unsubscribe");
-      }
-    } catch (error) {
-      console.error("Unsubscribe error:", error);
-      setShowConfirmation("Error al cancelar suscripción. Intenta de nuevo.");
-      setTimeout(() => setShowConfirmation(null), 3000);
-    } finally {
-      setIsUnsubscribing(false);
-      setShowUnsubscribe(false);
-    }
+    // Redirect to unsubscribe page for final confirmation
+    window.history.pushState({}, "", `/unsubscribe?email=${user.email}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    setShowUnsubscribe(false);
   };
 
   if (!user || isLoading) {
@@ -354,16 +327,14 @@ export function Dashboard() {
               <button
                 onClick={() => setShowUnsubscribe(false)}
                 className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                disabled={isUnsubscribing}
               >
                 Mantener suscripción
               </button>
               <button
                 onClick={handleUnsubscribe}
-                disabled={isUnsubscribing}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                {isUnsubscribing ? "Procesando..." : "Confirmar cancelación"}
+                Confirmar cancelación
               </button>
             </div>
           </div>

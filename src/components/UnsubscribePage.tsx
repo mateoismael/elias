@@ -17,6 +17,17 @@ export function UnsubscribePage() {
     }
   }, []);
 
+  useEffect(() => {
+    // Auto-redirect after successful unsubscription
+    if (currentStep === "success") {
+      const timer = setTimeout(() => {
+        goHome();
+      }, 4000); // 4 seconds delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
+
   const handleUnsubscribe = async () => {
     if (!email || !email.includes("@")) {
       setErrorMessage("Por favor, ingresa un correo electrónico válido.");
@@ -39,6 +50,8 @@ export function UnsubscribePage() {
       );
 
       if (response.ok) {
+        // Clear user session since they're no longer subscribed
+        localStorage.removeItem("pseudosapiens_user");
         setCurrentStep("success");
       } else {
         throw new Error("Error en la desuscripción");
@@ -188,12 +201,9 @@ export function UnsubscribePage() {
               </p>
             </div>
 
-            <button
-              onClick={goHome}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-            >
-              Volver al inicio
-            </button>
+            <div className="text-slate-500 dark:text-slate-400 text-sm">
+              Serás redirigido al inicio en unos segundos...
+            </div>
           </div>
         );
 
