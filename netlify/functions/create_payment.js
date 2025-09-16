@@ -1,136 +1,235 @@
 // Izipay Payment Token API - Septiembre 2025
+// VERSIÓN FUNCIONAL COMPLETA - NO MOCK
 // Endpoint para crear tokens de formulario de pago
-// Optimizado para Netlify Functions JavaScript
+// Compatible con Netlify Functions
 
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 exports.handler = async (event, context) => {
   // CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': 'https://pseudosapiens.com',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
   };
 
   // Handle preflight OPTIONS request
-  if (event.httpMethod === 'OPTIONS') {
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
       headers,
-      body: ''
+      body: "",
     };
   }
 
   // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
   try {
     // Parse request body
-    const requestData = JSON.parse(event.body || '{}');
-    const { plan } = requestData;
+    const requestData = JSON.parse(event.body || "{}");
+    const { user_email, plan_id } = requestData;
+
+    // Validate input
+    if (!user_email || !plan_id) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          status: "error",
+          message: "user_email and plan_id are required",
+        }),
+      };
+    }
 
     // Environment variables
-    const shopId = process.env.IZIPAY_SHOP_ID || '34172081';
-    const testMode = (process.env.IZIPAY_TEST_MODE || 'true').toLowerCase() === 'true';
-    const apiUrl = process.env.IZIPAY_API_URL || 'https://api.micuentaweb.pe';
-    
-    // Debug: Log environment variables (without sensitive data)
-    console.log('Environment check:', {
-      shopId: shopId,
-      testMode: testMode,
-      apiUrl: apiUrl,
-      hasTestPassword: !!process.env.IZIPAY_TEST_PASSWORD,
-      hasProdPassword: !!process.env.IZIPAY_PROD_PASSWORD,
-      hasTestKey: !!process.env.IZIPAY_PUBLIC_TEST_KEY,
-      hasProdKey: !!process.env.IZIPAY_PUBLIC_PROD_KEY
-    });
-    
-    // Credentials based on mode
-    const password = testMode 
-      ? process.env.IZIPAY_TEST_PASSWORD 
+    const shopId = process.env.IZIPAY_SHOP_ID || "34172081";
+    const testMode =
+      (process.env.IZIPAY_TEST_MODE || "true").toLowerCase() === "true";
+    const apiUrl = process.env.IZIPAY_API_URL || "https://api.micuentaweb.pe";
+
+    // Get credentials based on mode
+    const password = testMode
+      ? process.env.IZIPAY_TEST_PASSWORD
       : process.env.IZIPAY_PROD_PASSWORD;
-    const publicKey = testMode 
-      ? process.env.IZIPAY_PUBLIC_TEST_KEY 
+    const publicKey = testMode
+      ? process.env.IZIPAY_PUBLIC_TEST_KEY
       : process.env.IZIPAY_PUBLIC_PROD_KEY;
 
     if (!password || !publicKey) {
+      console.error("Missing Izipay credentials");
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ 
-          error: 'Missing Izipay credentials',
-          mode: testMode ? 'test' : 'production',
+        body: JSON.stringify({
+          status: "error",
+          message: "Server configuration error",
           debug: {
             hasPassword: !!password,
             hasPublicKey: !!publicKey,
-            shopId: shopId
-          }
-        })
+            shopId: shopId,
+            testMode: testMode,
+          },
+        }),
       };
     }
 
     // Plan configuration
     const plans = {
-      'basico': { amount: 5, currency: 'PEN', description: 'Plan Básico S/5' },
-      'premium': { amount: 10, currency: 'PEN', description: 'Plan Premium S/10' }
+      1: { amount: 500, description: "Plan Premium Básico - S/5.00/mes" },
+      2: { amount: 1000, description: "Plan Premium Plus - S/10.00/mes" },
     };
 
-    const selectedPlan = plans[plan];
+    const selectedPlan = plans[plan_id];
     if (!selectedPlan) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid plan', availablePlans: Object.keys(plans) })
+        body: JSON.stringify({
+          status: "error",
+          message: "Invalid plan_id. Must be 1 or 2",
+          availablePlans: Object.keys(plans).map(Number),
+        }),
       };
     }
 
     // Generate unique order ID
-    const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = Date.now();
+    const emailHash = crypto
+      .createHash("md5")
+      .update(user_email)
+      .digest("hex")
+      .substring(0, 8);
+    const orderId = `pseudosapiens_plan_${plan_id}_${timestamp}_${emailHash}`;
 
-    // For now, return a mock success response to test the frontend
-    // TODO: Implement actual Izipay API call once credentials are confirmed
-    console.log('Mock payment creation for:', {
-      plan: plan,
+    // Create Basic Authentication header
+    const authString = `${shopId}:${password}`;
+    const authBase64 = Buffer.from(authString).toString("base64");
+
+    // Prepare payment data for Izipay API
+    const paymentData = {
+      amount: selectedPlan.amount,
+      currency: "PEN",
       orderId: orderId,
-      testMode: testMode
+      customer: {
+        email: user_email,
+        billingDetails: {
+          firstName: user_email.split("@")[0], // Use email prefix as name
+          lastName: "",
+          phoneNumber: "",
+          identityType: "DNI",
+          identityCode: "",
+          address: "",
+          country: "PE",
+          city: "Lima",
+          state: "Lima",
+          zipCode: "00001",
+        },
+      },
+      metadata: {
+        plan_id: plan_id,
+        description: selectedPlan.description,
+        source: "pseudosapiens_dashboard",
+      },
+    };
+
+    console.log("Creating payment with Izipay:", {
+      orderId: orderId,
+      amount: selectedPlan.amount,
+      testMode: testMode,
+      shopId: shopId,
     });
 
-    // Return mock successful response
+    // Make actual API call to Izipay
+    const fetch = require("node-fetch");
+    const izipayResponse = await fetch(
+      `${apiUrl}/api-payment/V4/Charge/CreatePayment`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${authBase64}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentData),
+      }
+    );
+
+    const izipayResult = await izipayResponse.json();
+
+    // Check response status
+    if (!izipayResponse.ok || izipayResult.status !== "SUCCESS") {
+      console.error("Izipay API error:", izipayResult);
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          status: "error",
+          message: "Payment gateway error",
+          error: izipayResult.message || "Unknown error",
+          details: izipayResult,
+        }),
+      };
+    }
+
+    // Extract formToken from response
+    const formToken = izipayResult.answer?.formToken;
+
+    if (!formToken) {
+      console.error("No formToken in Izipay response:", izipayResult);
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          status: "error",
+          message: "Invalid response from payment gateway",
+          details: "No formToken received",
+        }),
+      };
+    }
+
+    // Success! Return formToken and configuration
+    console.log("Payment token created successfully:", orderId);
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        success: true,
-        token: `mock_token_${Date.now()}`, // Mock token for testing
-        publicKey: publicKey,
-        orderId: orderId,
-        amount: selectedPlan.amount,
-        currency: selectedPlan.currency,
-        description: selectedPlan.description,
-        testMode: testMode,
-        shopId: shopId,
-        mock: true // Indicates this is a mock response
-      })
+        status: "success",
+        data: {
+          form_token: formToken,
+          public_key: publicKey,
+          order_id: orderId,
+          amount: selectedPlan.amount,
+          currency: "PEN",
+          customer_email: user_email,
+          plan_id: plan_id,
+          test_mode: testMode,
+          shop_id: shopId,
+          js_url:
+            "https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js",
+        },
+        timestamp: new Date().toISOString(),
+      }),
     };
-
   } catch (error) {
-    console.error('Create payment error:', error);
-    
+    console.error("Create payment error:", error);
+
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: 'Internal server error',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      })
+        status: "error",
+        message: "Internal server error",
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      }),
     };
   }
 };

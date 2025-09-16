@@ -5,19 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dashboard - Pseudosapiens</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link
-      rel="alternate icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💭</text></svg>"
-    />
     <meta
       name="description"
       content="Tu dashboard personal de frases motivacionales"
     />
 
-    <!-- Izipay JavaScript SDK - Septiembre 2025 -->
-    <script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js"></script>
-
-    <!-- Izipay Payment Styles (Inline) -->
+    <!-- Izipay JavaScript SDK - CARGADO DINÁMICAMENTE -->
+    <!-- Se cargará solo cuando sea necesario para pagos -->
 
     <style>
       :root {
@@ -543,6 +537,48 @@
         font-size: 0.9rem;
       }
 
+      /* Nuevos estilos para Izipay */
+      .payment-processing {
+        text-align: center;
+        padding: 3rem;
+      }
+
+      .payment-processing .spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--border-color);
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      #izipay-form-container {
+        margin-top: 2rem;
+        padding: 2rem;
+        background: var(--bg-primary);
+        border-radius: 12px;
+        border: 2px solid var(--primary-color);
+      }
+
+      #kr-embedded {
+        min-height: 400px;
+      }
+
+      .kr-embedded {
+        padding: 1rem;
+      }
+
       /* Onboarding Overlay */
       .onboarding-overlay {
         position: fixed;
@@ -673,6 +709,11 @@
         border-radius: 6px;
         margin: 1rem 0;
         font-size: 0.875rem;
+      }
+
+      /* Override Izipay default styles */
+      .kr-embedded iframe {
+        border-radius: 8px !important;
       }
     </style>
   </head>
@@ -1015,6 +1056,41 @@
     </div>
 
     <script>
+      // Variables globales para Izipay
+      let izipayLoaded = false;
+      let currentFormToken = null;
+      let currentPublicKey = null;
+
+      // Función para cargar el SDK de Izipay dinámicamente
+      function loadIzipaySDK(publicKey) {
+        return new Promise((resolve, reject) => {
+          if (izipayLoaded) {
+            resolve();
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
+          script.setAttribute('kr-public-key', publicKey);
+          script.onload = () => {
+            izipayLoaded = true;
+            console.log('Izipay SDK loaded successfully');
+            resolve();
+          };
+          script.onerror = () => {
+            console.error('Failed to load Izipay SDK');
+            reject(new Error('Failed to load Izipay SDK'));
+          };
+          document.head.appendChild(script);
+
+          // También cargar estilos de Izipay
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.css';
+          document.head.appendChild(link);
+        });
+      }
+
       // Global state
       let currentUser = null;
       let userSubscription = null;
@@ -1431,77 +1507,76 @@
         const container = document.getElementById("payment-plans-container");
         if (!container) return;
 
-        // Planes disponibles con precios actualizados 2025 - Solo Plan 1 y 2
+        // Planes disponibles - Solo Plan 1 y 2 activos (Sept 2025)
         const plans = [
           {
             id: 1,
-            name: "Premium Básico",
-            price: 5.0,
+            name: 'Premium Básico',
+            price: 5.00,
             emails: 1,
             features: [
-              "1 frase diaria (8:00 AM)",
-              "Sin publicidad",
-              "Soporte prioritario",
-            ],
+              '1 frase motivacional diaria',
+              'Enviada a las 8:00 AM',
+              'Sin publicidad',
+              'Soporte prioritario'
+            ]
           },
           {
             id: 2,
-            name: "Premium Plus",
-            price: 10.0,
+            name: 'Premium Plus',
+            price: 10.00,
             emails: 2,
             features: [
-              "2 frases diarias (8:00 AM, 5:00 PM)",
-              "Incluye Plan Básico",
-              "Frases exclusivas",
-              "Soporte VIP",
+              '2 frases motivacionales diarias',
+              'Enviadas a las 8:00 AM y 5:00 PM',
+              'Incluye todas las ventajas del Plan Básico',
+              'Frases exclusivas premium',
+              'Soporte VIP'
             ],
-            popular: true,
-          },
+            popular: true
+          }
         ];
 
         container.innerHTML = `
-                <h3 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">
-                    🚀 Selecciona tu Plan Premium
-                </h3>
-                <div class="payment-plans">
-                    ${plans
-                      .map(
-                        (plan) => `
-                        <div class="payment-plan ${
-                          plan.popular ? "popular" : ""
-                        }" onclick="selectPlan(${plan.id}, '${plan.name}', ${
-                          plan.price
-                        })">
-                            <div class="plan-header">
-                                <div class="plan-name">${plan.name}</div>
-                                <div class="plan-price">S/ ${plan.price.toFixed(
-                                  2
-                                )}<span style="font-size: 0.8rem; color: var(--text-secondary);">/mes</span></div>
-                            </div>
-                            <ul class="plan-features">
-                                ${plan.features
-                                  .map((feature) => `<li>✓ ${feature}</li>`)
-                                  .join("")}
-                            </ul>
-                            <div style="text-align: center; margin-top: 1rem;">
-                                <button class="btn btn-primary" style="width: 100%;">
-                                    Seleccionar Plan
-                                </button>
-                            </div>
-                        </div>
-                    `
-                      )
-                      .join("")}
+          <h3 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">
+            🚀 Selecciona tu Plan Premium
+          </h3>
+          <div class="payment-plans">
+            ${plans.map(plan => `
+              <div class="payment-plan ${plan.popular ? 'popular' : ''}" 
+                   onclick="selectPlan(${plan.id}, '${plan.name}', ${plan.price})"
+                   style="position: relative;">
+                ${plan.popular ? '<span style="position: absolute; top: -10px; right: 1rem; background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">🔥 Más Popular</span>' : ''}
+                <div class="plan-header">
+                  <div class="plan-name">${plan.name}</div>
+                  <div class="plan-price">
+                    S/ ${plan.price.toFixed(2)}
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">/mes</span>
+                  </div>
                 </div>
-                <div style="text-align: center; margin-top: 2rem;">
-                    <button class="btn btn-secondary" onclick="hidePaymentPlans()">
-                        Cancelar
-                    </button>
+                <ul class="plan-features">
+                  ${plan.features.map(feature => `<li>✓ ${feature}</li>`).join('')}
+                </ul>
+                <div style="text-align: center; margin-top: 1rem;">
+                  <button class="btn btn-primary" style="width: 100%;">
+                    Seleccionar Plan
+                  </button>
                 </div>
-                <div style="text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-                    <span style="color: var(--success-color);">🔒 Pago 100% seguro procesado por Izipay</span>
-                </div>
-            `;
+              </div>
+            `).join('')}
+          </div>
+          <div style="text-align: center; margin-top: 2rem;">
+            <button class="btn btn-secondary" onclick="hidePaymentPlans()">
+              Cancelar
+            </button>
+          </div>
+          <div style="text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+            <span style="color: var(--success-color);">
+              🔒 Pago 100% seguro procesado por Izipay<br>
+              <small>Acepta todas las tarjetas de crédito y débito</small>
+            </span>
+          </div>
+        `;
 
         container.style.display = "block";
       }
@@ -1513,75 +1588,198 @@
         }
       }
 
+      // Función mejorada para seleccionar plan
       async function selectPlan(planId, planName, planPrice) {
         if (!currentUser) return;
 
-        if (
-          confirm(
-            `¿Confirmas la suscripción a ${planName} por S/ ${planPrice.toFixed(
-              2
-            )}/mes?\n\nSe abrirá el formulario de pago seguro.`
-          )
-        ) {
-          // Mostrar loading
-          const container = document.getElementById("payment-plans-container");
-          container.innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
-                        <h3>Creando formulario de pago...</h3>
-                        <p style="color: var(--text-secondary);">Conectando con Izipay de forma segura</p>
-                    </div>
-                `;
+        if (!confirm(
+          `¿Confirmas la suscripción a ${planName} por S/ ${planPrice.toFixed(2)}/mes?\n\n` +
+          `Se abrirá el formulario de pago seguro de Izipay.`
+        )) {
+          return;
+        }
 
-          try {
-            // Crear configuración de pago
-            const response = await fetch("/.netlify/functions/create_payment", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                user_email: currentUser.email,
-                plan_id: planId,
-              }),
+        // Mostrar loading
+        const container = document.getElementById('payment-plans-container');
+        container.innerHTML = `
+          <div class="payment-processing">
+            <div class="spinner"></div>
+            <h3>Preparando formulario de pago...</h3>
+            <p style="color: var(--text-secondary);">Conectando con Izipay de forma segura</p>
+          </div>
+        `;
+
+        try {
+          // Llamar a la función de Netlify para crear el token
+          console.log('Creating payment token for plan:', planId);
+          
+          const response = await fetch('/.netlify/functions/create_payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_email: currentUser.email,
+              plan_id: planId
+            })
+          });
+
+          const result = await response.json();
+          console.log('Payment API response:', result);
+
+          if (result.status === 'success' && result.data) {
+            const { form_token, public_key, order_id, amount, js_url } = result.data;
+            
+            // Guardar para uso posterior
+            currentFormToken = form_token;
+            currentPublicKey = public_key;
+
+            // Cargar SDK de Izipay si no está cargado
+            await loadIzipaySDK(public_key);
+
+            // Mostrar formulario de pago Izipay
+            container.innerHTML = `
+              <div id="izipay-form-container">
+                <h3 style="text-align: center; margin-bottom: 1.5rem;">
+                  💳 Completa tu Pago
+                </h3>
+                <p style="text-align: center; margin-bottom: 2rem; color: var(--text-secondary);">
+                  Plan: <strong>${planName}</strong> - S/ ${(amount/100).toFixed(2)}/mes<br>
+                  <small>Order ID: ${order_id}</small>
+                </p>
+                
+                <!-- Contenedor del formulario Izipay -->
+                <div id="kr-embedded">
+                  <div class="kr-embedded" kr-form-token="${form_token}"></div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 2rem;">
+                  <button class="btn btn-secondary" onclick="cancelPayment()">
+                    Cancelar
+                  </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                  <span style="color: var(--success-color);">
+                    🔒 Pago 100% seguro procesado por Izipay<br>
+                    <small>Tarjeta de prueba: 4970100000000055</small>
+                  </span>
+                </div>
+              </div>
+            `;
+
+            // Inicializar formulario Izipay
+            if (window.KR) {
+              initializeIzipayForm(form_token);
+            } else {
+              console.error('KR object not available');
+              throw new Error('Izipay SDK not loaded properly');
+            }
+
+          } else {
+            throw new Error(result.message || 'Error creating payment token');
+          }
+
+        } catch (error) {
+          console.error('Error selecting plan:', error);
+          container.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+              <h3 style="color: var(--danger-color);">❌ Error al procesar el pago</h3>
+              <p>${error.message}</p>
+              <button class="btn btn-primary" onclick="hidePaymentPlans()" style="margin-top: 1rem;">
+                Intentar nuevamente
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      // Función para inicializar el formulario de Izipay
+      function initializeIzipayForm(formToken) {
+        try {
+          console.log('Initializing Izipay form with token:', formToken.substring(0, 20) + '...');
+
+          // Configurar el formulario
+          KR.setFormConfig({
+            'formToken': formToken,
+            'kr-language': 'es-ES'
+          });
+
+          // Adjuntar el formulario al contenedor
+          KR.attachForm('#kr-embedded').then(({ KR, result }) => {
+            console.log('Izipay form attached successfully');
+            
+            // Manejar el envío del formulario
+            KR.onSubmit((paymentData) => {
+              console.log('Payment submitted:', paymentData);
+              
+              // Aquí puedes validar el pago con tu backend
+              validatePayment(paymentData);
+              
+              // Prevenir el envío por defecto
+              return false;
             });
 
-            const result = await response.json();
+            // Manejar errores
+            KR.onError((error) => {
+              console.error('Izipay error:', error);
+              showError('Error en el formulario de pago: ' + error.message);
+            });
 
-            if (result.status === "success") {
-              showSuccess(
-                "Formulario de pago creado. Próximamente: integración completa con Izipay."
-              );
+          }).catch((error) => {
+            console.error('Error attaching Izipay form:', error);
+            showError('Error al cargar el formulario de pago');
+          });
 
-              // Por ahora, mostrar información del token generado
-              container.innerHTML = `
-                            <div style="text-align: center; padding: 2rem; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-color);">
-                                <h3 style="color: var(--success-color);">✅ Token de Pago Generado</h3>
-                                <p><strong>Plan:</strong> ${planName}</p>
-                                <p><strong>Precio:</strong> S/ ${planPrice.toFixed(
-                                  2
-                                )}/mes</p>
-                                <p><strong>Order ID:</strong> ${
-                                  result.data.order_id
-                                }</p>
-                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 1rem;">
-                                    El formulario de pago de Izipay se integrará próximamente.
-                                </p>
-                                <button class="btn btn-primary" onclick="hidePaymentPlans()" style="margin-top: 1rem;">
-                                    Entendido
-                                </button>
-                            </div>
-                        `;
-            } else {
-              throw new Error(result.message || "Error creating payment");
-            }
-          } catch (error) {
-            console.error("Error selecting plan:", error);
-            showError(
-              "Error al procesar el plan. Verifica tu conexión e inténtalo más tarde."
-            );
-            hidePaymentPlans();
+        } catch (error) {
+          console.error('Error initializing Izipay:', error);
+          showError('Error al inicializar el sistema de pago');
+        }
+      }
+
+      // Función para validar el pago con el backend
+      async function validatePayment(paymentData) {
+        try {
+          console.log('Validating payment with backend...');
+          
+          // Llamar al webhook handler para procesar el pago
+          const response = await fetch('/.netlify/functions/webhook_handler', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              'kr-answer': paymentData.rawClientAnswer,
+              'kr-hash': paymentData.hash,
+              'kr-hash-algorithm': 'sha256_hmac'
+            })
+          });
+
+          if (response.ok) {
+            // Pago exitoso
+            console.log('Payment validated successfully');
+            showSuccess('¡Pago procesado exitosamente! Tu suscripción premium está activa.');
+            
+            // Recargar datos del dashboard
+            setTimeout(() => {
+              hidePaymentPlans();
+              loadUserSubscription();
+            }, 3000);
+            
+          } else {
+            throw new Error('Payment validation failed');
           }
+
+        } catch (error) {
+          console.error('Payment validation error:', error);
+          showError('Error al procesar el pago. Por favor intenta nuevamente.');
+        }
+      }
+
+      // Función para cancelar el pago
+      function cancelPayment() {
+        if (confirm('¿Estás seguro que deseas cancelar el proceso de pago?')) {
+          hidePaymentPlans();
         }
       }
 
