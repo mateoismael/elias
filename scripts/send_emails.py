@@ -595,7 +595,7 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 <body>
 <p>{phrase.text}</p>
 <p>— {author_name}</p>
-<p><a href="https://pseudosapiens.com/dashboard?tab=preferences">Mi Dashboard</a> • <a href="https://pseudosapiens.com/unsubscribe">Desuscribirse</a></p>
+<p><a href="https://pseudosapiens.com/dashboard">Mi Dashboard</a> • <a href="https://pseudosapiens.com/unsubscribe?email={subscriber.email}">Desuscribirse</a></p>
 <div style="display:none">{unique_timestamp}</div>
 </body>
 </html>"""
@@ -607,7 +607,7 @@ def build_email_content(subscriber: Subscriber, phrase: Phrase) -> EmailContent:
 
 ---
 Mi Dashboard: https://pseudosapiens.com/dashboard
-Desuscribirse: https://pseudosapiens.com/unsubscribe
+Desuscribirse: https://pseudosapiens.com/unsubscribe?email={subscriber.email}
 """
 
     return EmailContent(
@@ -714,7 +714,7 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
             "Message-ID": f"<{idem}@pseudosapiens.com>",
             
             # Headers OBLIGATORIOS 2025 - ACTIVADOS
-            "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe>",
+            "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe?email={content.recipient.email}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             
             # Headers optimizados para deliverability
