@@ -1,9 +1,9 @@
 # Netlify configuration (Sep 2025)
-# Static site, no build step needed. Enables form detection at deploy time.
+# React SPA with build step
 
 [build]
-  command = ""
-  publish = "."
+  command = "npm ci && npm run build"
+  publish = "dist-react"
 
 # =====================================================
 # CLEAN URLs - SEO OPTIMIZED (2025 BEST PRACTICES)
@@ -35,4 +35,10 @@
 [[redirects]]
   from = "/unsubscribe"
   to = "/unsubscribe.html"
+  status = 200
+
+# SPA routing - catch all routes and serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
