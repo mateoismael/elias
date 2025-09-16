@@ -1,84 +1,90 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-type Step = 'confirm' | 'processing' | 'success' | 'error';
+type Step = "confirm" | "processing" | "success" | "error";
 
 export function UnsubscribePage() {
-  const [currentStep, setCurrentStep] = useState<Step>('confirm');
-  const [email, setEmail] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [currentEmail, setCurrentEmail] = useState('');
+  const [currentStep, setCurrentStep] = useState<Step>("confirm");
+  const [email, setEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [currentEmail, setCurrentEmail] = useState("");
 
   useEffect(() => {
     // Pre-fill email if provided in URL
     const urlParams = new URLSearchParams(window.location.search);
-    const emailParam = urlParams.get('email');
+    const emailParam = urlParams.get("email");
     if (emailParam) {
       setEmail(emailParam);
     }
   }, []);
 
   const handleUnsubscribe = async () => {
-    if (!email || !email.includes('@')) {
-      setErrorMessage('Por favor, ingresa un correo electrónico válido.');
+    if (!email || !email.includes("@")) {
+      setErrorMessage("Por favor, ingresa un correo electrónico válido.");
       return;
     }
 
     setCurrentEmail(email);
-    setCurrentStep('processing');
+    setCurrentStep("processing");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/webhook/unsubscribe`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: email.toLowerCase() })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/webhook/unsubscribe`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email.toLowerCase() }),
+        }
+      );
 
       if (response.ok) {
-        setCurrentStep('success');
+        setCurrentStep("success");
       } else {
-        throw new Error('Error en la desuscripción');
+        throw new Error("Error en la desuscripción");
       }
     } catch (error) {
-      console.error('Unsubscribe error:', error);
-      setErrorMessage('No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente.');
-      setCurrentStep('error');
+      console.error("Unsubscribe error:", error);
+      setErrorMessage(
+        "No pudimos procesar tu desuscripción. Por favor, inténtalo nuevamente."
+      );
+      setCurrentStep("error");
     }
   };
 
   const goToPreferences = () => {
     if (email) {
       // Try to redirect to dashboard if user wants to change preferences instead
-      window.history.pushState({}, '', '/dashboard');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.history.pushState({}, "", "/dashboard");
+      window.dispatchEvent(new PopStateEvent("popstate"));
     } else {
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
     }
   };
 
   const goHome = () => {
-    window.history.pushState({}, '', '/');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.history.pushState({}, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   const retryUnsubscribe = () => {
     setEmail(currentEmail);
-    setCurrentStep('confirm');
-    setErrorMessage('');
+    setCurrentStep("confirm");
+    setErrorMessage("");
   };
 
   const renderStep = () => {
     switch (currentStep) {
-      case 'confirm':
+      case "confirm":
         return (
           <div className="text-center">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
               ¿Deseas desuscribirte?
             </h1>
             <p className="text-slate-600 dark:text-slate-400 mb-6">
-              Lamentamos que te vayas. Ingresa tu correo electrónico para confirmar tu desuscripción.
+              Lamentamos que te vayas. Ingresa tu correo electrónico para
+              confirmar tu desuscripción.
             </p>
 
             <div className="mb-6">
@@ -97,13 +103,15 @@ export function UnsubscribePage() {
                 required
                 autoComplete="email"
                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-white"
-                onKeyDown={(e) => e.key === 'Enter' && handleUnsubscribe()}
+                onKeyDown={(e) => e.key === "Enter" && handleUnsubscribe()}
               />
             </div>
 
             {errorMessage && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-red-600 dark:text-red-400 text-sm">{errorMessage}</p>
+                <p className="text-red-600 dark:text-red-400 text-sm">
+                  {errorMessage}
+                </p>
               </div>
             )}
 
@@ -132,7 +140,7 @@ export function UnsubscribePage() {
           </div>
         );
 
-      case 'processing':
+      case "processing":
         return (
           <div className="text-center">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">
@@ -147,11 +155,13 @@ export function UnsubscribePage() {
           </div>
         );
 
-      case 'success':
+      case "success":
         return (
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-green-600 dark:text-green-400 text-2xl">✓</span>
+              <span className="text-green-600 dark:text-green-400 text-2xl">
+                ✓
+              </span>
             </div>
 
             <h1 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">
@@ -163,16 +173,18 @@ export function UnsubscribePage() {
                 <strong>Tu suscripción ha sido cancelada exitosamente.</strong>
               </p>
               <p className="text-green-700 dark:text-green-300 mt-2">
-                Ya no recibirás más frases motivacionales en tu correo electrónico.
-                Si cambiaste de opinión, siempre puedes volver a suscribirte en nuestro sitio web.
+                Ya no recibirás más frases motivacionales en tu correo
+                electrónico. Si cambiaste de opinión, siempre puedes volver a
+                suscribirte en nuestro sitio web.
               </p>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mb-6">
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                <strong>¿Te despides por ahora?</strong><br />
-                Esperamos verte pronto de nuevo. Siempre estaremos aquí para inspirarte
-                cuando lo necesites.
+                <strong>¿Te despides por ahora?</strong>
+                <br />
+                Esperamos verte pronto de nuevo. Siempre estaremos aquí para
+                inspirarte cuando lo necesites.
               </p>
             </div>
 
@@ -185,7 +197,7 @@ export function UnsubscribePage() {
           </div>
         );
 
-      case 'error':
+      case "error":
         return (
           <div className="text-center">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -197,9 +209,7 @@ export function UnsubscribePage() {
             </h1>
 
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-              <p className="text-red-800 dark:text-red-200">
-                {errorMessage}
-              </p>
+              <p className="text-red-800 dark:text-red-200">{errorMessage}</p>
             </div>
 
             <div className="space-y-3">

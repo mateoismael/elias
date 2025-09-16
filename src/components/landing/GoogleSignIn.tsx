@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
+import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 
 export function GoogleSignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    console.log('Google Sign-In successful:', credentialResponse);
+    console.log("Google Sign-In successful:", credentialResponse);
     setIsLoading(true);
     setError(null);
 
@@ -14,20 +14,23 @@ export function GoogleSignIn() {
       const credential = credentialResponse.credential;
 
       if (!credential) {
-        throw new Error('No credential received from Google');
+        throw new Error("No credential received from Google");
       }
 
       // Send credential to webhook
-      const apiResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/webhook/google-signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          credential: credential,
-          frequency: 'weekly-3' // Default to free plan
-        })
-      });
+      const apiResponse = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/webhook/google-signin`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            credential: credential,
+            frequency: "weekly-3", // Default to free plan
+          }),
+        }
+      );
 
       const data = await apiResponse.json();
 
@@ -38,30 +41,29 @@ export function GoogleSignIn() {
           email: data.user.email,
           name: data.user.name,
           auth_method: data.user.auth_method,
-          avatar_url: data.user.avatar_url || null
+          avatar_url: data.user.avatar_url || null,
         };
-        localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
+        localStorage.setItem("pseudosapiens_user", JSON.stringify(userData));
 
         // Redirect to dashboard
         setTimeout(() => {
-          window.history.pushState({}, '', '/dashboard');
-          window.dispatchEvent(new PopStateEvent('popstate'));
+          window.history.pushState({}, "", "/dashboard");
+          window.dispatchEvent(new PopStateEvent("popstate"));
         }, 1500);
       } else {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || "Authentication failed");
       }
     } catch (error) {
-      console.error('Google Sign-In error:', error);
-      setError('Error al registrarse. Intenta de nuevo.');
+      console.error("Google Sign-In error:", error);
+      setError("Error al registrarse. Intenta de nuevo.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    setError('Error al conectar con Google. Intenta de nuevo.');
+    setError("Error al conectar con Google. Intenta de nuevo.");
   };
-
 
   if (error) {
     return (
