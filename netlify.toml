@@ -32,12 +32,7 @@
   to = "/dashboard.html"
   status = 200
 
-[[redirects]]
-  from = "/unsubscribe"
-  to = "/unsubscribe.html"
-  status = 200
-
-# SPA routing - catch all routes and serve index.html
+# SPA routing - catch all routes and serve index.html for React Router
 [[redirects]]
   from = "/*"
   to = "/index.html"
