@@ -127,6 +127,8 @@ export function Dashboard() {
       );
 
       if (response.ok) {
+        // Clear user session since they're no longer subscribed
+        localStorage.removeItem("pseudosapiens_user");
         // Redirect to unsubscribe success page
         window.history.pushState({}, "", `/unsubscribe?email=${user.email}`);
         window.dispatchEvent(new PopStateEvent("popstate"));
