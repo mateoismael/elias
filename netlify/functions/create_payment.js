@@ -147,8 +147,7 @@ exports.handler = async (event, context) => {
       shopId: shopId,
     });
 
-    // Make actual API call to Izipay
-    const fetch = require("node-fetch");
+    // Make actual API call to Izipay (Node 18+ global fetch)
     const izipayResponse = await fetch(
       `${apiUrl}/api-payment/V4/Charge/CreatePayment`,
       {
