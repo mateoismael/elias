@@ -1706,30 +1706,51 @@
           });
 
           // Adjuntar el formulario al contenedor
-          KR.attachForm('#kr-embedded').then(({ KR, result }) => {
-            console.log('Izipay form attached successfully');
-            
-            // Manejar el envío del formulario
-            KR.onSubmit((paymentData) => {
-              console.log('Payment submitted:', paymentData);
-              
-              // Aquí puedes validar el pago con tu backend
-              validatePayment(paymentData);
-              
-              // Prevenir el envío por defecto
-              return false;
-            });
+            KR.attachForm('#kr-embedded').then(({ KR, result }) => {
+              console.log('Izipay form attached successfully');
 
-            // Manejar errores
-            KR.onError((error) => {
-              console.error('Izipay error:', error);
-              showError('Error en el formulario de pago: ' + error.message);
-            });
+              // Adjuntar manejadores de eventos compatibles con V4
+              if (typeof KR.onPaymentSuccess === 'function') {
+                KR.onPaymentSuccess((paymentData) => {
+                  console.log('Payment success:', paymentData);
+                  // Enviar al backend para verificación HMAC y activación
+                  validatePayment(paymentData);
+                });
 
-          }).catch((error) => {
-            console.error('Error attaching Izipay form:', error);
-            showError('Error al cargar el formulario de pago');
-          });
+                // Cancel handlers (nombres pueden variar según versión)
+                if (typeof KR.onPaymentCancelled === 'function') {
+                  KR.onPaymentCancelled(() => {
+                    console.warn('Payment cancelled by user');
+                    showError('Pago cancelado. Puedes intentar nuevamente.');
+                  });
+                } else if (typeof KR.onPaymentCanceled === 'function') {
+                  KR.onPaymentCanceled(() => {
+                    console.warn('Payment canceled by user');
+                    showError('Pago cancelado. Puedes intentar nuevamente.');
+                  });
+                }
+              } else if (typeof KR.onSubmit === 'function') {
+                // Fallback documentado: interceptar submit y evitar POST automático
+                KR.onSubmit((paymentData) => {
+                  console.log('Payment submit (fallback):', paymentData);
+                  // Validar con backend usando kr-answer y kr-hash
+                  validatePayment(paymentData);
+                  // Evitar POST automático del SDK (usamos nuestro webhook)
+                  return false;
+                });
+              }
+
+              // Manejar errores de la librería
+              if (typeof KR.onError === 'function') {
+                KR.onError((error) => {
+                  console.error('Izipay error:', error);
+                  showError('Error en el formulario de pago: ' + (error && error.message ? error.message : 'Desconocido'));
+                });
+              }
+            }).catch((error) => {
+              console.error('Error attaching Izipay form:', error);
+              showError('Error al cargar el formulario de pago');
+            });
 
         } catch (error) {
           console.error('Error initializing Izipay:', error);
