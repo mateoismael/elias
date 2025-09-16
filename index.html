@@ -108,42 +108,84 @@
         }
       }
       
-      /* Google Sign-In Button Styling */
+      /* Google Sign-In Button Styling 2025 */
       .google-signin-container {
-        margin: 16px 0;
+        margin: 24px 0;
         text-align: center;
       }
       
-      .divider {
+      /* Información de registro */
+      .signup-info {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #0369a1;
+        border-radius: 12px;
+        padding: 20px;
         margin: 20px 0;
+        text-align: left;
+      }
+      
+      .signup-info h2 {
+        margin: 0 0 16px 0;
+        font-size: 1.1rem;
+        color: #0c4a6e;
         text-align: center;
-        position: relative;
+      }
+      
+      .info-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      
+      .step-icon {
+        font-size: 1.2rem;
+        min-width: 24px;
+      }
+      
+      .step-text {
+        color: #1e40af;
+      }
+      
+      .signup-disclaimer {
+        font-size: 0.85rem;
         color: #6b7280;
-        font-size: 0.875rem;
+        text-align: center;
+        margin: 16px 0 0 0;
+        line-height: 1.4;
       }
       
-      .divider::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #e5e7eb;
-      }
-      
-      .divider span {
-        background: #fff;
-        padding: 0 16px;
+      .signup-disclaimer strong {
+        color: #059669;
       }
       
       @media (prefers-color-scheme: dark) {
-        .divider::before {
-          background: #374151;
+        .signup-info {
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          border-color: #3b82f6;
         }
         
-        .divider span {
-          background: #111;
+        .signup-info h2 {
+          color: #60a5fa;
+        }
+        
+        .step-text {
+          color: #93c5fd;
+        }
+        
+        .signup-disclaimer {
+          color: #9ca3af;
+        }
+        
+        .signup-disclaimer strong {
+          color: #10b981;
         }
       }
       
@@ -369,6 +411,11 @@
         font-size: 0.875rem;
       }
       
+      .google-signin-exit {
+        margin: 20px 0;
+        text-align: center;
+      }
+      
       @keyframes modalFadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -457,75 +504,43 @@
         Gratis - Sin spam - Cancela cuando quieras
       </p>
 
-      <!-- Google Sign-In Button -->
+      <!-- Información de qué pasará -->
+      <div class="signup-info">
+        <h2>¿Qué pasará cuando te registres?</h2>
+        <div class="info-steps">
+          <div class="step">
+            <span class="step-icon">📧</span>
+            <span class="step-text">Recibirás <strong>3 frases por semana</strong> (Lunes, Miércoles, Viernes a las 8:00)</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">🎯</span>
+            <span class="step-text">Acceso a tu <strong>dashboard personal</strong> para gestionar tus preferencias</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">🔐</span>
+            <span class="step-text">100% seguro con Google - <strong>sin spam, cancela cuando quieras</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Sign-In Button Mejorado 2025 -->
       <div class="google-signin-container">
         <div id="g_id_signin"
              data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
+             data-shape="pill"
+             data-theme="filled_blue"
+             data-text="continue_with"
              data-size="large"
-             data-logo_alignment="left">
+             data-logo_alignment="left"
+             data-width="280"
+             data-use_fedcm_for_button="true">
         </div>
       </div>
       
-      <div class="divider">
-        <span>o regístrate con email</span>
-      </div>
-
-      <!-- Netlify Forms: nombre del formulario "subscribe" -->
-      <form
-        name="subscribe"
-        method="POST"
-        data-netlify="true"
-        netlify-honeypot="bot-field"
-        action="/"
-      >
-        <input type="hidden" name="form-name" value="subscribe" />
-        <p hidden>
-          <label>¿No completar: <input name="bot-field" /></label>
-        </p>
-        <label for="email">Correo electrónico</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="tu@email.com"
-          required
-          autocomplete="email"
-          aria-describedby="email-help"
-          aria-invalid="false"
-        />
-        <div id="email-help" class="sr-only">
-          Ingresa tu email para recibir frases motivacionales
-        </div>
-        
-        <label for="frequency">¿Qué frecuencia prefieres?</label>
-        <select 
-          id="frequency" 
-          name="frequency" 
-          required
-          aria-describedby="frequency-help"
-        >
-          <option value="weekly-3" selected>3/semana (L-M-V, 8:00) - Gratis</option>
-        </select>
-        <div id="frequency-help" class="sr-only">
-          Elige con qué frecuencia quieres recibir frases motivacionales
-        </div>
-        
-        <button type="submit" aria-describedby="submit-help">
-          Comenzar ahora gratis
-        </button>
-        <div id="submit-help" class="sr-only">
-          Al enviar el formulario te suscribirás para recibir emails
-        </div>
-        
-        
-        <small
-          >Al enviar, aceptas recibir correos. Incluimos instrucciones para
-          cancelar en cada email.</small
-        >
-      </form>
+      <p class="signup-disclaimer">
+        Al registrarte, aceptas recibir frases motivacionales. 
+        <strong>Sin spam</strong> - puedes cancelar en cualquier momento desde tu dashboard.
+      </p>
 
       <hr style="margin: 20px 0; opacity: 0.2" />
       <p>
@@ -534,30 +549,27 @@
       </p>
     </main>
 
-    <!-- Exit Intent Modal -->
+    <!-- Exit Intent Modal - Simplificado solo para Google -->
     <div id="exit-intent-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
       <div class="modal-backdrop" onclick="closeExitModal()"></div>
       <div class="modal-content">
         <button class="modal-close" onclick="closeExitModal()" aria-label="Cerrar modal">&times;</button>
         
         <h2 id="modal-title">¡Espera! Una última oportunidad</h2>
-        <p>¿Qué tal si empezamos con <strong>3 frases por semana</strong>?<br><small>Lunes-Miércoles-Viernes a las 8:00 AM</small></p>
+        <p>Únete a <strong>más de 1,200 personas</strong> que ya reciben frases motivacionales</p>
         
-        <form class="mini-form" onsubmit="submitExitIntent(event)">
-          <input 
-            type="email" 
-            id="exit-email"
-            placeholder="tu@email.com" 
-            required
-            autocomplete="email"
-            aria-label="Email para suscripción semanal"
-          >
-          <button type="submit" class="exit-cta">
-            Suscripción semanal gratis
-          </button>
-        </form>
+        <div class="google-signin-exit">
+          <div id="g_id_signin_exit"
+               data-type="standard"
+               data-shape="pill"
+               data-theme="filled_blue"
+               data-text="continue_with"
+               data-size="large"
+               data-width="280">
+          </div>
+        </div>
         
-        <small>3 frases por semana (L-M-V). Deliverability-safe. Cancela cuando quieras.</small>
+        <small>3 frases por semana (L-M-V) • Sin spam • Cancela cuando quieras</small>
       </div>
     </div>
 
@@ -933,72 +945,42 @@
         return false;
       }
       
-      // Handle email form submission to also save user data and redirect
-      function handleEmailFormSubmission() {
-        const form = document.querySelector('form[name="subscribe"]');
-        if (form) {
-          form.addEventListener('submit', function(event) {
-            const emailInput = document.getElementById('email');
-            const email = emailInput.value.trim();
-            
-            if (email) {
-              // Save basic user data for dashboard access
-              const userData = {
-                id: null, // Will be set by webhook response
-                email: email,
-                name: email.split('@')[0], // Use email prefix as name
-                auth_method: 'email',
-                avatar_url: null
-              };
-              localStorage.setItem('pseudosapiens_user', JSON.stringify(userData));
-              console.log('Email user data saved for dashboard access');
-            }
-            
-            // Redirect to dashboard instead of success page
-            // The form will still submit to Netlify, but user goes to dashboard
-            window.location.href = '/dashboard';
-          });
-        }
-      }
-      
-      // Initialize Google Sign-In when page loads (Fixed 2025)
+      // Initialize Google Sign-In when page loads (Updated 2025 with FedCM)
       window.onload = function() {
         // Check authentication first
         if (checkAuthenticationAndRedirect()) {
           return; // Stop execution if redirecting
         }
         
-        // Set up email form handler
-        handleEmailFormSubmission();
-        
         if (typeof google !== 'undefined' && google.accounts) {
-          // Detect if we're on mobile
-          const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          
-          // Unified Google Sign-In configuration
+          // Unified Google Sign-In configuration with FedCM enabled
           google.accounts.id.initialize({
             client_id: '970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com',
             callback: handleGoogleSignIn,
             auto_select: false,
             cancel_on_tap_outside: true,
-            // Always use popup for consistency
-            ux_mode: 'popup'
+            ux_mode: 'popup',
+            use_fedcm_for_prompt: true // Enable FedCM for better UX
           });
           
-          // Render the sign-in button (no One Tap to avoid conflicts)
+          // Render the sign-in button with improved styling
           google.accounts.id.renderButton(
             document.getElementById('g_id_signin'),
             {
               type: 'standard',
-              shape: 'rectangular',
-              theme: 'outline',
-              text: 'signin_with',
+              shape: 'pill',
+              theme: 'filled_blue',
+              text: 'continue_with',
               size: 'large',
-              logo_alignment: 'left'
+              logo_alignment: 'left',
+              width: 280,
+              use_fedcm_for_button: true // Enable FedCM for button
             }
           );
           
-          console.log('Google Sign-In button rendered successfully');
+          console.log('Google Sign-In button rendered successfully with FedCM');
+        } else {
+          console.error('Google Identity Services not loaded');
         }
       };
     </script>
