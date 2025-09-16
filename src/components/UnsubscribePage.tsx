@@ -27,7 +27,7 @@ export function UnsubscribePage() {
     setCurrentStep('processing');
 
     try {
-      const response = await fetch('https://elias-webhook.vercel.app/webhook/unsubscribe', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/webhook/unsubscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

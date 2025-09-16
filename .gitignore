@@ -5,6 +5,20 @@ __pycache__/
 # Virtual env
 .venv/
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+dist-react/
+build/
+
+# Legacy files (mantener local, no subir a repo)
+legacy-html/
+
 # Env files
 .env
 .env.*

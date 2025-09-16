@@ -4,7 +4,19 @@ import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { UnsubscribePage } from './components/UnsubscribePage';
 
-const GOOGLE_CLIENT_ID = '970302400473-3umkhto0uhqs08p5njnhbm90in9lcp49.apps.googleusercontent.com';
+// ✅ SOLUCIÓN: Usar variable de entorno en lugar de hardcodear
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// 🔒 VALIDACIÓN: Verificar que las variables de entorno estén configuradas
+if (!GOOGLE_CLIENT_ID) {
+  console.error('❌ VITE_GOOGLE_CLIENT_ID no está configurado');
+  throw new Error('Configuración de Google OAuth faltante');
+}
+
+if (!import.meta.env.VITE_API_BASE_URL) {
+  console.error('❌ VITE_API_BASE_URL no está configurado');
+  throw new Error('Configuración de API faltante');
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState<'landing' | 'dashboard' | 'unsubscribe'>('landing');

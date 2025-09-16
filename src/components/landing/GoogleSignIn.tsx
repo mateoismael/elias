@@ -18,7 +18,7 @@ export function GoogleSignIn() {
       }
 
       // Send credential to webhook
-      const apiResponse = await fetch('https://elias-webhook.vercel.app/webhook/google-signin', {
+      const apiResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/webhook/google-signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
