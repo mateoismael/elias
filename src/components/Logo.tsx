@@ -60,23 +60,23 @@ export function Logo({
     }
 
     if (theme === 'light') {
-      // Landing page (fondo claro) - usar logo oscuro
+      // Landing page (fondo claro) - usar favicon
       return {
-        logoSrc: '/assets/logos/pss-dark.png',
+        logoSrc: '/favicon.svg',
         logoClass: `${sizeClasses[size].logo}`,
         textClass: finalTextClass
       };
     } else if (theme === 'dark') {
-      // Dashboard (fondo oscuro) - usar logo claro  
+      // Dashboard (fondo oscuro) - usar favicon  
       return {
-        logoSrc: '/assets/logos/pss-light.png',
+        logoSrc: '/favicon.svg',
         logoClass: `${sizeClasses[size].logo}`,
         textClass: finalTextClass
       };
     } else {
-      // Auto - usar dark mode classes de Tailwind
+      // Auto - usar favicon
       return {
-        logoSrc: '/assets/logos/pss-dark.png',
+        logoSrc: '/favicon.svg',
         logoClass: `${sizeClasses[size].logo}`,
         textClass: finalTextClass
       };
