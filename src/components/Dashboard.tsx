@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Logo } from "./Logo";
 
 interface UserData {
   id: string;
@@ -136,14 +137,12 @@ export function Dashboard() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P</span>
-              </div>
-              <h1 className="text-xl font-semibold text-slate-900 dark:text-white">
-                Pseudosapiens
-              </h1>
-            </div>
+            <Logo 
+              variant="compact" 
+              size="sm" 
+              theme="light"
+              textColor="light"
+            />
 
             {/* User Info */}
             <div className="flex items-center gap-4">

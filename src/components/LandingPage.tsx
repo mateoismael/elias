@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { GoogleSignIn } from "./landing/GoogleSignIn";
+import { Logo } from "./Logo";
 
 export function LandingPage() {
   // Check if user is already authenticated
@@ -25,8 +26,26 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header with Logo - 2025 Best Practices */}
+      <header className="w-full py-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Logo 
+            variant="full" 
+            size="md" 
+            theme="dark"
+            textColor="dark"
+          />
+          {/* Navigation space for future use */}
+          <div className="hidden sm:block">
+            <div className="flex items-center space-x-8">
+              {/* Future navigation items */}
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section - Above the fold optimization */}
-      <main className="px-4 py-16 sm:py-24">
+      <main className="px-4 py-8 sm:py-16">
         <div className="max-w-4xl mx-auto text-center">
           {/* Value Proposition - Clear and compelling */}
           <div className="mb-16">
