@@ -712,17 +712,24 @@ def send_single_email(config: EmailConfig, content: EmailContent) -> None:
         "headers": {
             "Idempotency-Key": idem,
             "Message-ID": f"<{idem}@pseudosapiens.com>",
-            
+
             # Headers OBLIGATORIOS 2025 - ACTIVADOS
             "List-Unsubscribe": f"<https://pseudosapiens.com/unsubscribe?email={content.recipient.email}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            
+
             # Headers optimizados para deliverability
             "X-Entity-Type": "transactional",
             "X-Entity-Ref-ID": f"{content.unique_timestamp}",
             "Precedence": "bulk",
             "Auto-Submitted": "auto-generated",
-            "X-Priority": "3"
+            "X-Priority": "3",
+
+            # Headers para BIMI - Branding y Logo (Sep 2025)
+            "X-Mailer": "Pseudosapiens Email System v2.0",
+            "Organization": "Pseudosapiens",
+            "X-Brand-Logo": "https://pseudosapiens.com/favicon.svg",
+            "X-Original-From": "Pseudosapiens <reflexiones@pseudosapiens.com>",
+            "X-Company": "Pseudosapiens"
         }
     }
     
@@ -1155,7 +1162,14 @@ def send_via_resend_with_context(sender: str, recipients_data: List[Dict], subje
                         "Message-ID": f"<{idem}@pseudosapiens.com>",
                         # Headers básicos - sin List-Unsubscribe por ahora
                         # "List-Unsubscribe": f"<{unsubscribe_url}>",
-                        # "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+                        # "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+
+                        # Headers para BIMI - Branding y Logo (Sep 2025)
+                        "X-Mailer": "Pseudosapiens Email System v2.0",
+                        "Organization": "Pseudosapiens",
+                        "X-Brand-Logo": "https://pseudosapiens.com/favicon.svg",
+                        "X-Original-From": "Pseudosapiens <reflexiones@pseudosapiens.com>",
+                        "X-Company": "Pseudosapiens"
                     }
                 }
                 
@@ -1235,7 +1249,14 @@ def send_via_resend(sender: str, to: List[str], subject: str, html: str, text: s
                     "reply_to": "reflexiones@pseudosapiens.com",
                     "headers": {
                         "Idempotency-Key": idem,
-                        "Message-ID": f"<{idem}@pseudosapiens.com>"
+                        "Message-ID": f"<{idem}@pseudosapiens.com>",
+
+                        # Headers para BIMI - Branding y Logo (Sep 2025)
+                        "X-Mailer": "Pseudosapiens Email System v2.0",
+                        "Organization": "Pseudosapiens",
+                        "X-Brand-Logo": "https://pseudosapiens.com/favicon.svg",
+                        "X-Original-From": "Pseudosapiens <reflexiones@pseudosapiens.com>",
+                        "X-Company": "Pseudosapiens"
                     }
                 }
                 
