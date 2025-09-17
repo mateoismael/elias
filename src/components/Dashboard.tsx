@@ -137,12 +137,7 @@ export function Dashboard() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Logo 
-              variant="compact" 
-              size="sm" 
-              theme="light"
-              textColor="light"
-            />
+            <Logo variant="compact" size="sm" theme="light" textColor="light" />
 
             {/* User Info */}
             <div className="flex items-center gap-4">
@@ -207,7 +202,9 @@ export function Dashboard() {
               </p>
             </div>
             <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 dark:text-blue-400 text-2xl">📧</span>
+              <span className="text-blue-600 dark:text-blue-400 text-2xl">
+                📧
+              </span>
             </div>
           </div>
         </div>
@@ -242,7 +239,7 @@ export function Dashboard() {
                 3 frases por semana
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                Lunes, Miércoles, Viernes
+                Lunes, Miércoles, Viernes a las 8:00 AM
               </div>
             </div>
 
@@ -305,7 +302,9 @@ export function Dashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-slate-900 dark:text-white">Actualizando plan...</p>
+            <p className="text-slate-900 dark:text-white">
+              Actualizando plan...
+            </p>
           </div>
         </div>
       )}
