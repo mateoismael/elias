@@ -1,3 +1,8 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
-  <text y='0.9em' font-size='90'>💭</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- Fondo circular blanco -->
+  <circle cx="150" cy="150" r="145" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+  
+  <!-- Solo el símbolo psi centrado - negro y más grande -->
+  <text x="150" y="190" text-anchor="middle" font-family="Arial,sans-serif" font-size="180" font-weight="bold" fill="#000000">ψ</text>
 </svg>
